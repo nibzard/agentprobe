@@ -5,17 +5,12 @@ Test how well AI agents interact with your CLI tools. AgentProbe runs Claude Cod
 ## Quick Start
 
 ```bash
-# Install dependencies
+# No installation needed - run directly with uvx
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test vercel --scenario deploy
+
+# Or install locally for development
 uv sync
-
-# Test a single scenario
 uv run agentprobe test vercel --scenario deploy
-
-# Run all benchmarks
-uv run agentprobe benchmark --all
-
-# Test specific tool
-uv run agentprobe benchmark gh
 ```
 
 ## What It Does
@@ -45,24 +40,24 @@ Help us build a comprehensive benchmark of CLI tools! The table below shows how 
 ### Test Individual Scenarios
 
 ```bash
-# Test a specific scenario
-uv run agentprobe test <tool> --scenario <name>
+# Test a specific scenario (with uvx)
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr
 
 # With custom working directory
-uv run agentprobe test docker --scenario run-nginx --work-dir /path/to/project
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test docker --scenario run-nginx --work-dir /path/to/project
 
-# Show detailed trace
-uv run agentprobe test gh --scenario create-pr --verbose
+# Show detailed trace  
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --verbose
 ```
 
 ### Benchmark Tools
 
 ```bash
 # Test all scenarios for one tool
-uv run agentprobe benchmark vercel
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark vercel
 
 # Test all available tools and scenarios
-uv run agentprobe benchmark --all
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark --all
 ```
 
 ### Reports
