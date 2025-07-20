@@ -204,7 +204,7 @@ Focus on:
 - Whether the final state matches the intended goal
 - Any false positive success claims
 
-Respond in JSON format:
+Respond with ONLY a JSON object in a ```json code block with this exact structure:
 {{
     "actual_success": boolean,
     "discrepancy": boolean,
@@ -225,12 +225,11 @@ Respond in JSON format:
         import subprocess
         import sys
         
-        # Create analysis script using proper string formatting
-        analysis_script_template = '''
+        # Create analysis script without f-string conflicts
+        analysis_script = '''
 import asyncio
 import json
 import sys
-import re
 from claude_code_sdk import query, ClaudeCodeOptions
 
 async def main():
@@ -243,51 +242,65 @@ async def main():
             cwd=None,
         )
         
+        # Debug logging
+        print("DEBUG: Starting Claude analysis", file=sys.stderr)
+        
         analysis_trace = []
         async for message in query(prompt=prompt, options=options):
             analysis_trace.append(message)
         
-        # Extract JSON response - look for JSON blocks
+        print(f"DEBUG: Received {{len(analysis_trace)}} messages", file=sys.stderr)
+        
+        # Extract JSON response from Claude's messages
         for message in reversed(analysis_trace):
             if hasattr(message, "content") and message.content:
-                content = str(message.content)
+                # Extract text from TextBlock objects
+                content = ""
+                if isinstance(message.content, list):
+                    text_parts = []
+                    for block in message.content:
+                        if hasattr(block, 'text'):
+                            text_parts.append(block.text)
+                        else:
+                            text_parts.append(str(block))
+                    content = ' '.join(text_parts)
+                else:
+                    content = str(message.content)
+                
+                print(f"DEBUG: Extracted content length: {{len(content)}}", file=sys.stderr)
                 
                 # Look for JSON code blocks first
                 if '```json' in content:
+                    print("DEBUG: Found JSON code block", file=sys.stderr)
                     start = content.find('```json') + 7
                     end = content.find('```', start)
                     if end > start:
                         json_str = content[start:end].strip()
+                        print(f"DEBUG: JSON string length: {{len(json_str)}}", file=sys.stderr)
                         try:
                             result = json.loads(json_str)
-                            result["claude_analysis"] = content
+                            # Store full Claude response separately to avoid JSON serialization issues
+                            result["claude_analysis"] = content[:1000] + "..." if len(content) > 1000 else content
                             print(json.dumps(result))
                             return
-                        except json.JSONDecodeError:
-                            pass
+                        except json.JSONDecodeError as e:
+                            print(f"DEBUG: JSON decode error: {{e}}", file=sys.stderr)
                 
-                # Look for direct JSON - balanced brace approach
-                brace_count = 0
-                start_idx = -1
-                for i, char in enumerate(content):
-                    if char == '{{':
-                        if start_idx == -1:
-                            start_idx = i
-                        brace_count += 1
-                    elif char == '}}':
-                        brace_count -= 1
-                        if brace_count == 0 and start_idx != -1:
-                            json_str = content[start_idx:i+1]
-                            try:
-                                result = json.loads(json_str)
-                                result["claude_analysis"] = content
-                                print(json.dumps(result))
-                                return
-                            except json.JSONDecodeError:
-                                pass
-                            break
+                # Look for direct JSON - find the first {{ and last }}
+                first_brace = content.find('{{')
+                last_brace = content.rfind('}}')
+                if first_brace >= 0 and last_brace > first_brace:
+                    json_str = content[first_brace:last_brace+1]
+                    try:
+                        result = json.loads(json_str)
+                        result["claude_analysis"] = content[:1000] + "..." if len(content) > 1000 else content
+                        print(json.dumps(result))
+                        return
+                    except json.JSONDecodeError as e:
+                        print(f"DEBUG: Direct JSON decode error: {{e}}", file=sys.stderr)
         
         # Fallback if no JSON found
+        print("DEBUG: No valid JSON found, using fallback", file=sys.stderr)
         fallback_result = {{
             "actual_success": None,
             "discrepancy": False,
@@ -299,21 +312,20 @@ async def main():
         print(json.dumps(fallback_result))
         
     except Exception as e:
+        print(f"DEBUG: Exception occurred: {{type(e).__name__}}: {{str(e)}}", file=sys.stderr)
         error_result = {{
             "actual_success": None,
             "discrepancy": False,
-            "failure_reasons": [f"Analysis failed: {{str(e)}}"],
+            "failure_reasons": ["Analysis failed: " + str(e)],
             "help_used": False,
             "recommendations": ["Manual review needed"],
-            "claude_analysis": f"Error: {{str(e)}}"
+            "claude_analysis": "Error: " + str(e)
         }}
         print(json.dumps(error_result))
 
 if __name__ == "__main__":
     asyncio.run(main())
-'''
-        
-        analysis_script = analysis_script_template.format(prompt_file=prompt_file)
+'''.format(prompt_file=prompt_file)
         
         # Write the script to a temporary file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
@@ -360,6 +372,10 @@ if __name__ == "__main__":
                 }
         
         # If subprocess failed, return error info
+        # Also print stderr for debugging
+        if result.stderr:
+            print(f"Subprocess stderr:\n{result.stderr}", file=sys.stderr)
+        
         return {
             "actual_success": None,
             "discrepancy": False,
