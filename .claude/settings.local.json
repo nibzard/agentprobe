@@ -5,7 +5,9 @@
       "Bash(mkdir:*)",
       "Bash(uv sync:*)",
       "Bash(uv run:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
