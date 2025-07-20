@@ -225,16 +225,17 @@ Respond in JSON format:
         import subprocess
         import sys
         
-        # Create a simple Python script that uses Claude Code SDK (avoid template conflicts)
-        analysis_script = """
+        # Create analysis script using proper string formatting
+        analysis_script_template = '''
 import asyncio
 import json
 import sys
+import re
 from claude_code_sdk import query, ClaudeCodeOptions
 
 async def main():
     try:
-        with open('""" + prompt_file + """', 'r') as f:
+        with open('{prompt_file}', 'r') as f:
             prompt = f.read()
         
         options = ClaudeCodeOptions(
@@ -251,57 +252,68 @@ async def main():
             if hasattr(message, "content") and message.content:
                 content = str(message.content)
                 
-                # Look for JSON block patterns
-                import re
-                json_pattern = r'```json\\s*(\\{.*?\\})\\s*```'
-                json_match = re.search(json_pattern, content, re.DOTALL)
-                if json_match:
-                    try:
-                        result = json.loads(json_match.group(1))
-                        result["claude_analysis"] = content
-                        print(json.dumps(result))
-                        return
-                    except json.JSONDecodeError:
-                        pass
+                # Look for JSON code blocks first
+                if '```json' in content:
+                    start = content.find('```json') + 7
+                    end = content.find('```', start)
+                    if end > start:
+                        json_str = content[start:end].strip()
+                        try:
+                            result = json.loads(json_str)
+                            result["claude_analysis"] = content
+                            print(json.dumps(result))
+                            return
+                        except json.JSONDecodeError:
+                            pass
                 
-                # Look for direct JSON (simple approach)
-                start = content.find('{')
-                end = content.rfind('}') + 1
-                if start >= 0 and end > start:
-                    json_str = content[start:end]
-                    try:
-                        result = json.loads(json_str)
-                        result["claude_analysis"] = content
-                        print(json.dumps(result))
-                        return
-                    except json.JSONDecodeError:
-                        pass
+                # Look for direct JSON - balanced brace approach
+                brace_count = 0
+                start_idx = -1
+                for i, char in enumerate(content):
+                    if char == '{{':
+                        if start_idx == -1:
+                            start_idx = i
+                        brace_count += 1
+                    elif char == '}}':
+                        brace_count -= 1
+                        if brace_count == 0 and start_idx != -1:
+                            json_str = content[start_idx:i+1]
+                            try:
+                                result = json.loads(json_str)
+                                result["claude_analysis"] = content
+                                print(json.dumps(result))
+                                return
+                            except json.JSONDecodeError:
+                                pass
+                            break
         
         # Fallback if no JSON found
-        fallback_result = {
+        fallback_result = {{
             "actual_success": None,
             "discrepancy": False,
             "failure_reasons": ["Could not parse Claude response"],
             "help_used": False,
             "recommendations": ["Manual review needed"],
             "claude_analysis": "Analysis parsing failed"
-        }
+        }}
         print(json.dumps(fallback_result))
         
     except Exception as e:
-        error_result = {
+        error_result = {{
             "actual_success": None,
             "discrepancy": False,
-            "failure_reasons": [f"Analysis failed: {str(e)}"],
+            "failure_reasons": [f"Analysis failed: {{str(e)}}"],
             "help_used": False,
             "recommendations": ["Manual review needed"],
-            "claude_analysis": f"Error: {str(e)}"
-        }
+            "claude_analysis": f"Error: {{str(e)}}"
+        }}
         print(json.dumps(error_result))
 
 if __name__ == "__main__":
     asyncio.run(main())
-"""
+'''
+        
+        analysis_script = analysis_script_template.format(prompt_file=prompt_file)
         
         # Write the script to a temporary file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
@@ -322,6 +334,20 @@ if __name__ == "__main__":
             try:
                 return json.loads(result.stdout.strip())
             except json.JSONDecodeError as e:
+                # Try to extract just the JSON part from stdout
+                stdout = result.stdout.strip()
+                # Look for JSON in the output
+                if '```json' in stdout:
+                    start = stdout.find('```json') + 7
+                    end = stdout.find('```', start)
+                    if end > start:
+                        json_str = stdout[start:end].strip()
+                        try:
+                            parsed_result = json.loads(json_str)
+                            return parsed_result
+                        except json.JSONDecodeError:
+                            pass
+                
                 # Add debug info about parsing failure
                 return {
                     "actual_success": None,
@@ -329,7 +355,7 @@ if __name__ == "__main__":
                     "failure_reasons": [f"JSON parse error: {str(e)[:100]}"],
                     "help_used": False,
                     "recommendations": ["Manual review needed"],
-                    "claude_analysis": f"Parse error. Stdout: {result.stdout[:300]}",
+                    "claude_analysis": f"Parse error. Stdout: {result.stdout[:500]}",
                     "subprocess_error": True
                 }
         
