@@ -1,0 +1,1 @@
+Set up environment variables for the project. Add a production environment variable called API_URL with value https://api.example.com and a development variable called DEBUG with value true.

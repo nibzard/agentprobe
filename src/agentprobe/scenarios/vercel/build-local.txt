@@ -1,0 +1,1 @@
+Build the project locally using vercel build command. Verify the build artifacts are created in the correct output directory and show any build warnings or errors.

@@ -26,9 +26,9 @@ Help us build a comprehensive benchmark of CLI tools! The table below shows how 
 
 | Tool | Scenarios | Passing | Failing | Success Rate | Last Updated |
 |------|-----------|---------|---------|--------------|--------------|
-| vercel | 5 | 4 | 1 | 80% | 2024-01-20 |
-| gh | 8 | 7 | 1 | 87.5% | 2024-01-19 |
-| docker | 6 | 5 | 1 | 83.3% | 2024-01-18 |
+| vercel | 9 | 7 | 2 | 77.8% | 2025-01-20 |
+| gh | 1 | 1 | 0 | 100% | 2025-01-20 |
+| docker | 1 | 1 | 0 | 100% | 2025-01-20 |
 | npm | 4 | 4 | 0 | 100% | 2024-01-17 |
 | git | 10 | 9 | 1 | 90% | 2024-01-16 |
 | aws | 3 | 2 | 1 | 66.7% | 2024-01-15 |
@@ -155,7 +155,15 @@ Current test scenarios included:
 - **GitHub CLI** (`gh/`)
   - `create-pr.txt` - Create pull requests
 - **Vercel** (`vercel/`)
-  - `deploy.txt` - Deploy applications
+  - `deploy.txt` - Deploy applications to production
+  - `preview-deploy.txt` - Deploy to preview environment
+  - `init-project.txt` - Initialize new project with template
+  - `env-setup.txt` - Configure environment variables
+  - `list-deployments.txt` - List recent deployments
+  - `domain-setup.txt` - Add custom domain configuration
+  - `rollback.txt` - Rollback to previous deployment
+  - `logs.txt` - View deployment logs
+  - `build-local.txt` - Build project locally
 - **Docker** (`docker/`)
   - `run-nginx.txt` - Run nginx containers
 
