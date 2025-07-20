@@ -29,9 +29,6 @@ Help us build a comprehensive benchmark of CLI tools! The table below shows how 
 | vercel | 9 | 7 | 2 | 77.8% | 2025-01-20 |
 | gh | 1 | 1 | 0 | 100% | 2025-01-20 |
 | docker | 1 | 1 | 0 | 100% | 2025-01-20 |
-| npm | 4 | 4 | 0 | 100% | 2024-01-17 |
-| git | 10 | 9 | 1 | 90% | 2024-01-16 |
-| aws | 3 | 2 | 1 | 66.7% | 2024-01-15 |
 
 [View detailed results →](scenarios/RESULTS.md)
 
@@ -138,7 +135,7 @@ uv run agentprobe report --format markdown
 AgentProbe follows a simple 4-component architecture:
 
 1. **CLI Layer** (`cli.py`) - Typer-based command interface
-2. **Runner** (`runner.py`) - Executes scenarios via Claude Code SDK  
+2. **Runner** (`runner.py`) - Executes scenarios via Claude Code SDK
 3. **Analyzer** (`analyzer.py`) - Generic pattern analysis on execution traces
 4. **Reporter** (`reporter.py`) - Rich terminal formatting for results
 
@@ -178,12 +175,14 @@ uv sync --extra dev
 # Format code
 uv run black src/
 
-# Lint code  
+# Lint code
 uv run ruff check src/
 
 # Run tests (when implemented)
 uv run pytest
 ```
+
+See [TASKS.md](TASKS.md) for the development roadmap and task tracking.
 
 ## Programmatic Usage
 
@@ -194,7 +193,7 @@ from agentprobe import test_cli
 async def main():
     result = await test_cli("gh", "create-pr")
     print(f"Success: {result['success']}")
-    print(f"Duration: {result['duration_seconds']}s") 
+    print(f"Duration: {result['duration_seconds']}s")
     print(f"Cost: ${result['cost_usd']:.3f}")
 
 asyncio.run(main())
