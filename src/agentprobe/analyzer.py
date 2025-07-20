@@ -110,8 +110,8 @@ def aggregate_analyses(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
         "avg_turns": sum(analysis["total_turns"] for analysis in analyses) / total_runs,
         "min_turns": min(analysis["total_turns"] for analysis in analyses),
         "max_turns": max(analysis["total_turns"] for analysis in analyses),
-        "total_errors": sum(len(analysis["errors_encountered"]) for analysis in analyses),
-        "help_usage_rate": sum(1 for analysis in analyses if analysis["help_used"]) / total_runs,
+        "total_issues": sum(len(analysis.get("llm_analysis", {}).get("failure_reasons", [])) for analysis in analyses),
+        "help_usage_rate": sum(1 for analysis in analyses if analysis.get("llm_analysis", {}).get("help_used", False)) / total_runs,
         "common_observations": [],
         "common_recommendations": [],
     }

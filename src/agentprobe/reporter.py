@@ -33,10 +33,10 @@ def print_report(result: Dict[str, Any], analysis: Dict[str, Any]) -> None:
 
     summary_lines.append(f"• Required {analysis['total_turns']} turns to complete")
 
-    if analysis["errors_encountered"]:
-        summary_lines.append(
-            f"• Encountered {len(analysis['errors_encountered'])} errors"
-        )
+    # Error info now comes from Claude CLI analysis in observations
+    if analysis.get("llm_analysis", {}).get("failure_reasons"):
+        failure_count = len(analysis["llm_analysis"]["failure_reasons"])
+        summary_lines.append(f"• Claude detected {failure_count} specific issues")
 
     # Build content
     content = f"""[bold]Tool:[/bold] {result['tool']} | [bold]Scenario:[/bold] {result['scenario']}
@@ -102,7 +102,7 @@ def print_aggregate_report(
     summary_lines = [
         f"• Completed {total_runs} runs with {success_rate:.0%} success rate",
         f"• Average {aggregate_analysis['avg_turns']:.1f} turns (range: {aggregate_analysis['min_turns']}-{aggregate_analysis['max_turns']})",
-        f"• Total {aggregate_analysis['total_errors']} errors across all runs",
+        f"• Total {aggregate_analysis['total_issues']} issues detected by Claude across all runs",
         f"• Help usage in {aggregate_analysis['help_usage_rate']:.0%} of runs"
     ]
     
