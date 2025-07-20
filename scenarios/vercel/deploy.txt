@@ -1,0 +1,2 @@
+Deploy this Next.js application to production using Vercel CLI.
+Make sure the deployment is successful and return the deployment URL.
