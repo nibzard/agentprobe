@@ -45,7 +45,10 @@ async def enhanced_analyze_trace(
     # Add Claude CLI analysis if scenario info is available
     if scenario_text and tool_name:
         try:
-            claude_analysis = await claude_analyze_trace(trace, scenario_text, tool_name)
+            claude_analysis = await claude_analyze_trace(
+                trace, scenario_text, tool_name, 
+                claimed_success=traditional_analysis["success"]
+            )
             
             # Merge analyses
             enhanced_analysis = traditional_analysis.copy()
@@ -78,6 +81,12 @@ async def enhanced_analyze_trace(
             if claude_analysis.get("claude_analysis"):
                 enhanced_analysis["observations"].append(
                     f"📋 Full Claude Analysis: {claude_analysis['claude_analysis'][:500]}..."
+                )
+            
+            # Note if fallback was used
+            if claude_analysis.get("fallback_used"):
+                enhanced_analysis["observations"].append(
+                    "⚠️ Using fallback analysis (Claude CLI not available)"
                 )
             
             # Store Claude analysis for reporting
@@ -145,10 +154,12 @@ def aggregate_analyses(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def claude_analyze_trace(
     trace: List[Dict[str, Any]], 
     scenario_text: str, 
-    tool_name: str
+    tool_name: str,
+    claimed_success: bool = None
 ) -> Dict[str, Any]:
     """Use Claude CLI to analyze trace for better success/failure detection."""
     import subprocess
+    import os
     
     # Format trace for analysis
     trace_summary = []
@@ -203,9 +214,35 @@ Provide a comprehensive analysis covering:
 Be thorough and specific in your analysis."""
 
     try:
-        # Use Claude CLI to analyze
+        # Try to find claude command in various locations
+        claude_cmd = None
+        possible_paths = [
+            "claude",  # In PATH
+            "/usr/local/bin/claude",
+            "/opt/homebrew/bin/claude",
+            os.path.expanduser("~/.local/bin/claude"),
+        ]
+        
+        # Check environment variable
+        if os.environ.get("CLAUDE_CLI_PATH"):
+            possible_paths.insert(0, os.environ["CLAUDE_CLI_PATH"])
+        
+        # Find first available claude command
+        for path in possible_paths:
+            try:
+                test_result = subprocess.run([path, "--version"], capture_output=True, timeout=2)
+                if test_result.returncode == 0:
+                    claude_cmd = path
+                    break
+            except (FileNotFoundError, subprocess.SubprocessError, OSError):
+                continue
+        
+        if not claude_cmd:
+            raise FileNotFoundError("Claude CLI not found in any expected location")
+        
+        # Use Claude CLI to analyze with proper syntax
         result = subprocess.run(
-            ["claude", "--no-prompt", analysis_prompt],
+            [claude_cmd, "-p", analysis_prompt],
             capture_output=True,
             text=True,
             timeout=30
@@ -279,9 +316,20 @@ Be thorough and specific in your analysis."""
             actual_success = False
             failure_reasons.append("Permission denied - agent couldn't perform required actions")
         
+        # Check for agent claiming failure
+        if "failure" in trace_text or "cannot complete" in trace_text:
+            actual_success = False
+            failure_reasons.append("Agent reported failure")
+        
+        # Calculate discrepancy
+        discrepancy = False
+        if actual_success is not None and claimed_success is not None:
+            discrepancy = actual_success != claimed_success
+        
         return {
             "actual_success": actual_success,
-            "discrepancy": False,
+            "discrepancy": discrepancy,
             "failure_reasons": failure_reasons,
-            "evidence_summary": f"Fallback analysis - Claude CLI unavailable: {str(e)}"
+            "evidence_summary": f"Fallback analysis - Claude CLI unavailable: {str(e)}",
+            "fallback_used": True
         }
