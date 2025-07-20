@@ -1,7 +1,7 @@
 """Generic analysis of CLI execution traces."""
 
 from typing import List, Dict, Any
-from claude_code_sdk import ResultMessage
+from claude_code_sdk import ResultMessage, query, ClaudeCodeOptions
 
 
 def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -86,7 +86,7 @@ async def enhanced_analyze_trace(
             # Note if fallback was used
             if claude_analysis.get("fallback_used"):
                 enhanced_analysis["observations"].append(
-                    "⚠️ Using fallback analysis (Claude CLI not available)"
+                    "⚠️ Using fallback analysis (Claude Code SDK error)"
                 )
             
             # Store Claude analysis for reporting
@@ -95,9 +95,9 @@ async def enhanced_analyze_trace(
             return enhanced_analysis
             
         except Exception as e:
-            # Fall back to traditional analysis if Claude CLI fails
+            # Fall back to traditional analysis if Claude Code SDK fails
             traditional_analysis["observations"].append(
-                f"⚠️ Claude CLI analysis failed: {str(e)}"
+                f"⚠️ Claude Code SDK analysis failed: {str(e)}"
             )
             return traditional_analysis
     
@@ -157,9 +157,7 @@ async def claude_analyze_trace(
     tool_name: str,
     claimed_success: bool = None
 ) -> Dict[str, Any]:
-    """Use Claude CLI to analyze trace for better success/failure detection."""
-    import subprocess
-    import os
+    """Use Claude Code SDK to analyze trace for better success/failure detection."""
     
     # Format trace for analysis
     trace_summary = []
@@ -214,43 +212,25 @@ Provide a comprehensive analysis covering:
 Be thorough and specific in your analysis."""
 
     try:
-        # Try to find claude command in various locations
-        claude_cmd = None
-        possible_paths = [
-            "claude",  # In PATH
-            "/usr/local/bin/claude",
-            "/opt/homebrew/bin/claude",
-            os.path.expanduser("~/.local/bin/claude"),
-        ]
+        # Use Claude Code SDK for analysis (same as scenario execution)
+        options = ClaudeCodeOptions(max_turns=1)  # Single analysis turn
         
-        # Check environment variable
-        if os.environ.get("CLAUDE_CLI_PATH"):
-            possible_paths.insert(0, os.environ["CLAUDE_CLI_PATH"])
+        claude_response = ""
+        async for message in query(prompt=analysis_prompt, options=options):
+            # Extract the response content
+            if hasattr(message, "content"):
+                content = str(message.content)
+                # Handle list of TextBlocks
+                if "[TextBlock(" in content:
+                    import re
+                    text_matches = re.findall(r'TextBlock\(text="([^"]*)"', content)
+                    if text_matches:
+                        claude_response = " ".join(text_matches)
+                else:
+                    claude_response = content
+                break
         
-        # Find first available claude command
-        for path in possible_paths:
-            try:
-                test_result = subprocess.run([path, "--version"], capture_output=True, timeout=2)
-                if test_result.returncode == 0:
-                    claude_cmd = path
-                    break
-            except (FileNotFoundError, subprocess.SubprocessError, OSError):
-                continue
-        
-        if not claude_cmd:
-            raise FileNotFoundError("Claude CLI not found in any expected location")
-        
-        # Use Claude CLI to analyze with proper syntax
-        result = subprocess.run(
-            [claude_cmd, "-p", analysis_prompt],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if result.returncode == 0:
-            claude_response = result.stdout.strip()
-            
+        if claude_response:
             # Parse Claude's comprehensive response
             response_lower = claude_response.lower()
             
@@ -302,8 +282,8 @@ Be thorough and specific in your analysis."""
                 "claude_analysis": claude_response
             }
         else:
-            # Fallback if Claude CLI fails
-            return {"error": f"Claude CLI failed: {result.stderr}"}
+            # No response received
+            raise Exception("No response from Claude Code SDK")
             
     except Exception as e:
         # Fallback to basic pattern detection
@@ -330,6 +310,6 @@ Be thorough and specific in your analysis."""
             "actual_success": actual_success,
             "discrepancy": discrepancy,
             "failure_reasons": failure_reasons,
-            "evidence_summary": f"Fallback analysis - Claude CLI unavailable: {str(e)}",
+            "evidence_summary": f"Fallback analysis - Claude Code SDK error: {str(e)}",
             "fallback_used": True
         }
