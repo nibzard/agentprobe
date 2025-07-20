@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Dict, Any
-from claude_code_sdk import query, ClaudeCodeOptions
+from claude_code_sdk import query, ClaudeCodeOptions, ResultMessage
 
 
 async def run_test(
@@ -44,10 +44,10 @@ async def run_test(
     }
 
     # Process final result message
-    if trace and trace[-1].get("type") == "result":
+    if trace and isinstance(trace[-1], ResultMessage):
         final = trace[-1]
-        result["success"] = final.get("subtype") == "success"
-        result["duration_seconds"] = final.get("duration_ms", 0) / 1000
-        result["cost_usd"] = final.get("total_cost_usd", 0)
+        result["success"] = getattr(final, "subtype", None) == "success"
+        result["duration_seconds"] = getattr(final, "duration_ms", 0) / 1000
+        result["cost_usd"] = getattr(final, "total_cost_usd", 0)
 
     return result

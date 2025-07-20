@@ -37,7 +37,16 @@ def test(
             if verbose:
                 typer.echo("\n--- Full Trace ---")
                 for i, message in enumerate(result["trace"]):
-                    typer.echo(f"{i+1}: {message}")
+                    message_type = getattr(message, "type", "unknown")
+                    message_class = type(message).__name__
+                    typer.echo(f"{i+1}: [{message_class}] type={message_type}")
+                    
+                    # Show attributes for debugging
+                    if hasattr(message, "__dict__"):
+                        for attr, value in message.__dict__.items():
+                            typer.echo(f"    {attr}: {str(value)[:100]}")
+                    else:
+                        typer.echo(f"    Raw: {str(message)[:200]}")
 
         except FileNotFoundError as e:
             typer.echo(f"Error: {e}", err=True)
