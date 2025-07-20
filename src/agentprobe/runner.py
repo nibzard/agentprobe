@@ -11,7 +11,7 @@ async def run_test(
     """Run a test scenario using Claude Code SDK."""
     # Load scenario prompt
     scenario_path = (
-        Path(__file__).parent.parent.parent
+        Path(__file__).parent
         / "scenarios"
         / tool
         / f"{scenario_name}.txt"

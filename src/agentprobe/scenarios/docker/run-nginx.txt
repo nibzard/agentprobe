@@ -1,0 +1,2 @@
+Run an nginx container in detached mode, expose it on port 8080,
+and verify it's running correctly.

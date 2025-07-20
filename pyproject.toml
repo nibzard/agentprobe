@@ -29,7 +29,8 @@ Documentation = "https://github.com/nkkko/agentprobe#readme"
 Issues = "https://github.com/nkkko/agentprobe/issues"
 
 [project.scripts]
-agentprobe = "agentprobe.cli:app"
+agentprobe = "agentprobe.cli:main"
+
 
 [build-system]
 requires = ["hatchling"]

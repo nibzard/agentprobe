@@ -4,7 +4,8 @@
       "Bash(uv init:*)",
       "Bash(mkdir:*)",
       "Bash(uv sync:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

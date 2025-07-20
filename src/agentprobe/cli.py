@@ -57,7 +57,7 @@ def benchmark(
     """Run benchmark tests for CLI tools."""
 
     async def _run():
-        scenarios_dir = Path(__file__).parent.parent.parent / "scenarios"
+        scenarios_dir = Path(__file__).parent / "scenarios"
 
         tools_to_test = []
         if all:
@@ -103,5 +103,10 @@ def report(
     )
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the CLI."""
     app()
+
+
+if __name__ == "__main__":
+    main()
