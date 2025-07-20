@@ -37,6 +37,7 @@ async def run_test(
     result = {
         "tool": tool,
         "scenario": scenario_name,
+        "scenario_text": prompt,  # Include the actual scenario text
         "trace": trace,
         "success": False,
         "duration_seconds": 0,

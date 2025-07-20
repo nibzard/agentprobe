@@ -1,1 +1,13 @@
-Set up environment variables for the project. Add a production environment variable called API_URL with value https://api.example.com and a development variable called DEBUG with value true.
+Set up environment variables for the project using Vercel CLI. 
+
+Task: Add these environment variables to the Vercel project:
+- Production environment variable: API_URL = https://api.example.com  
+- Development environment variable: DEBUG = true
+
+Success criteria:
+- Use `vercel env` command to add the variables
+- Verify the variables were actually added by listing them with `vercel env ls`
+- Do NOT just create local .env files - the variables must be added to the Vercel platform
+- If you encounter permission issues or authentication problems, report this as a failure
+
+Important: Only report success if you can confirm the environment variables are visible in the Vercel platform.

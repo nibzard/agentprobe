@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from .runner import run_test
-from .analyzer import analyze_trace, aggregate_analyses
+from .analyzer import aggregate_analyses, enhanced_analyze_trace
 from .reporter import print_report, print_aggregate_report
 
 app = typer.Typer(
@@ -70,9 +70,13 @@ def test(
     async def _run():
         try:
             if runs == 1:
-                # Single run - use existing logic
+                # Single run - use enhanced analysis
                 result = await run_test(tool, scenario, work_dir)
-                analysis = analyze_trace(result["trace"])
+                analysis = await enhanced_analyze_trace(
+                    result["trace"], 
+                    result.get("scenario_text", ""), 
+                    result["tool"]
+                )
                 print_report(result, analysis)
 
                 if verbose:
@@ -86,7 +90,11 @@ def test(
                     typer.echo(f"Running {tool}/{scenario} - Run {run_num}/{runs}")
                     
                     result = await run_test(tool, scenario, work_dir)
-                    analysis = analyze_trace(result["trace"])
+                    analysis = await enhanced_analyze_trace(
+                        result["trace"], 
+                        result.get("scenario_text", ""), 
+                        result["tool"]
+                    )
                     
                     results.append(result)
                     analyses.append(analysis)
@@ -141,7 +149,11 @@ def benchmark(
                 scenario_name = scenario_file.stem
                 try:
                     result = await run_test(tool_name, scenario_name)
-                    analysis = analyze_trace(result["trace"])
+                    analysis = await enhanced_analyze_trace(
+                        result["trace"], 
+                        result.get("scenario_text", ""), 
+                        result["tool"]
+                    )
                     print_report(result, analysis)
                 except Exception as e:
                     typer.echo(f"Failed {tool_name}/{scenario_name}: {e}", err=True)

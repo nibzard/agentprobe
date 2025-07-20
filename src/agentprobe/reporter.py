@@ -9,12 +9,24 @@ def print_report(result: Dict[str, Any], analysis: Dict[str, Any]) -> None:
     """Print formatted report to terminal."""
     console = Console()
 
-    # Create status emoji
-    status = "✓ SUCCESS" if result["success"] else "❌ FAILED"
+    # Create status emoji with discrepancy detection
+    base_success = result["success"]
+    llm_analysis = analysis.get("llm_analysis", {})
+    
+    if llm_analysis.get("discrepancy"):
+        status = "⚠️ FALSE POSITIVE" if llm_analysis.get("claimed_success") else "🔍 REQUIRES REVIEW"
+    else:
+        status = "✓ SUCCESS" if base_success else "❌ FAILED"
 
-    # Build summary
+    # Build summary with LLM insights
     summary_lines = []
-    if result["success"]:
+    
+    if llm_analysis.get("discrepancy"):
+        if llm_analysis.get("claimed_success"):
+            summary_lines.append("• Agent claimed success but task actually failed")
+        else:
+            summary_lines.append("• Task status requires review")
+    elif base_success:
         summary_lines.append("• Task completed successfully")
     else:
         summary_lines.append("• Task failed to complete")
