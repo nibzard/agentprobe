@@ -46,7 +46,7 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --sc
 # With custom working directory
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test docker --scenario run-nginx --work-dir /path/to/project
 
-# Show detailed trace  
+# Show detailed trace with message debugging
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --verbose
 ```
 
@@ -66,6 +66,21 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark --
 # Generate reports (future feature)
 uv run agentprobe report --format markdown --output results.md
 ```
+
+### Debugging and Verbose Output
+
+The `--verbose` flag provides detailed insights into how Claude Code interacts with your CLI:
+
+```bash
+# Show full message trace with object types and attributes
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --verbose
+```
+
+Verbose output includes:
+- Message object types (SystemMessage, AssistantMessage, UserMessage, ResultMessage)
+- Message content and tool usage
+- SDK object attributes and debugging information
+- Full conversation trace between Claude and your CLI
 
 ## Example Output
 
