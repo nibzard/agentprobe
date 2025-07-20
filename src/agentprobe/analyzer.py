@@ -1,7 +1,13 @@
 """Generic analysis of CLI execution traces."""
 
 from typing import List, Dict, Any
-from claude_code_sdk import ResultMessage
+from claude_code_sdk import ResultMessage, query, ClaudeCodeOptions
+import concurrent.futures
+import anyio
+import asyncio
+import json
+import tempfile
+import os
 
 
 def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -83,10 +89,18 @@ async def enhanced_analyze_trace(
                     f"📋 Full Claude Analysis: {claude_analysis['claude_analysis'][:500]}..."
                 )
             
-            # Note if fallback was used
-            if claude_analysis.get("fallback_used"):
+            # Note analysis method used
+            if claude_analysis.get("subprocess_error"):
                 enhanced_analysis["observations"].append(
-                    "⚠️ Using enhanced fallback analysis (nested SDK calls disabled)"
+                    f"⚠️ Subprocess-based Claude analysis failed: {claude_analysis.get('subprocess_error')}"
+                )
+            elif claude_analysis.get("fallback_used"):
+                enhanced_analysis["observations"].append(
+                    "⚠️ Using minimal fallback analysis (Claude analysis failed)"
+                )
+            else:
+                enhanced_analysis["observations"].append(
+                    "✅ Using Claude Code SDK analysis (subprocess-based)"
                 )
             
             # Store Claude analysis for reporting
@@ -151,6 +165,206 @@ def aggregate_analyses(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
     return aggregate
 
 
+def run_claude_analysis_subprocess(
+    trace_summary: List[str], 
+    scenario_text: str, 
+    tool_name: str,
+    claimed_success: bool = None
+) -> Dict[str, Any]:
+    """Run Claude analysis in a separate process to completely avoid async context issues."""
+    
+    # Create analysis prompt
+    trace_text = "\n".join(trace_summary)
+    
+    analysis_prompt = f"""
+I need you to analyze the execution trace of an AI agent trying to complete a CLI task and determine if it actually succeeded or failed.
+
+**Original Task/Scenario:**
+{scenario_text}
+
+**CLI Tool:** {tool_name}
+
+**Agent's Claimed Result:** {"SUCCESS" if claimed_success else "FAILURE" if claimed_success is not None else "UNKNOWN"}
+
+**Full Execution Trace:**
+{trace_text}
+
+Please analyze this trace and provide:
+
+1. **Actual Success**: Did the agent actually complete the task successfully? (true/false)
+2. **Discrepancy**: Is there a difference between what the agent claimed and what actually happened?
+3. **Failure Reasons**: If it failed, what were the specific reasons?
+4. **Help Usage**: Did the agent appropriately use help flags or documentation?
+5. **Recommendations**: What could be improved for better CLI usability?
+
+Focus on:
+- Permission denials and authentication issues
+- Actual file/resource creation vs. claims
+- CLI syntax errors and unknown options
+- Whether the final state matches the intended goal
+- Any false positive success claims
+
+Respond in JSON format:
+{{
+    "actual_success": boolean,
+    "discrepancy": boolean,
+    "failure_reasons": ["reason1", "reason2"],
+    "help_used": boolean,
+    "recommendations": ["rec1", "rec2"],
+    "claude_analysis": "detailed explanation of your analysis"
+}}
+"""
+
+    # Write prompt to temporary file for subprocess
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write(analysis_prompt)
+            prompt_file = f.name
+        
+        # Use subprocess to run Claude CLI analysis
+        import subprocess
+        import sys
+        
+        # Create a simple Python script that uses Claude Code SDK (avoid template conflicts)
+        analysis_script = """
+import asyncio
+import json
+import sys
+from claude_code_sdk import query, ClaudeCodeOptions
+
+async def main():
+    try:
+        with open('""" + prompt_file + """', 'r') as f:
+            prompt = f.read()
+        
+        options = ClaudeCodeOptions(
+            max_turns=3,
+            cwd=None,
+        )
+        
+        analysis_trace = []
+        async for message in query(prompt=prompt, options=options):
+            analysis_trace.append(message)
+        
+        # Extract JSON response - look for JSON blocks
+        for message in reversed(analysis_trace):
+            if hasattr(message, "content") and message.content:
+                content = str(message.content)
+                
+                # Look for JSON block patterns
+                import re
+                json_pattern = r'```json\\s*(\\{.*?\\})\\s*```'
+                json_match = re.search(json_pattern, content, re.DOTALL)
+                if json_match:
+                    try:
+                        result = json.loads(json_match.group(1))
+                        result["claude_analysis"] = content
+                        print(json.dumps(result))
+                        return
+                    except json.JSONDecodeError:
+                        pass
+                
+                # Look for direct JSON (simple approach)
+                start = content.find('{')
+                end = content.rfind('}') + 1
+                if start >= 0 and end > start:
+                    json_str = content[start:end]
+                    try:
+                        result = json.loads(json_str)
+                        result["claude_analysis"] = content
+                        print(json.dumps(result))
+                        return
+                    except json.JSONDecodeError:
+                        pass
+        
+        # Fallback if no JSON found
+        fallback_result = {
+            "actual_success": None,
+            "discrepancy": False,
+            "failure_reasons": ["Could not parse Claude response"],
+            "help_used": False,
+            "recommendations": ["Manual review needed"],
+            "claude_analysis": "Analysis parsing failed"
+        }
+        print(json.dumps(fallback_result))
+        
+    except Exception as e:
+        error_result = {
+            "actual_success": None,
+            "discrepancy": False,
+            "failure_reasons": [f"Analysis failed: {str(e)}"],
+            "help_used": False,
+            "recommendations": ["Manual review needed"],
+            "claude_analysis": f"Error: {str(e)}"
+        }
+        print(json.dumps(error_result))
+
+if __name__ == "__main__":
+    asyncio.run(main())
+"""
+        
+        # Write the script to a temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(analysis_script)
+            script_file = f.name
+        
+        # Run the analysis script in subprocess
+        result = subprocess.run(
+            [sys.executable, script_file],
+            capture_output=True,
+            text=True,
+            timeout=120,  # 2 minute timeout
+            env=os.environ.copy()  # Pass environment variables
+        )
+        
+        # Parse the JSON output
+        if result.returncode == 0 and result.stdout.strip():
+            try:
+                return json.loads(result.stdout.strip())
+            except json.JSONDecodeError as e:
+                # Add debug info about parsing failure
+                return {
+                    "actual_success": None,
+                    "discrepancy": False,
+                    "failure_reasons": [f"JSON parse error: {str(e)[:100]}"],
+                    "help_used": False,
+                    "recommendations": ["Manual review needed"],
+                    "claude_analysis": f"Parse error. Stdout: {result.stdout[:300]}",
+                    "subprocess_error": True
+                }
+        
+        # If subprocess failed, return error info
+        return {
+            "actual_success": None,
+            "discrepancy": False,
+            "failure_reasons": [f"Subprocess analysis failed (code {result.returncode}): {result.stderr[:200]}"],
+            "help_used": False,
+            "recommendations": ["Manual review needed"],
+            "claude_analysis": f"Subprocess error: {result.stderr[:200]} | Stdout: {result.stdout[:200]}",
+            "subprocess_error": True
+        }
+        
+    except Exception as e:
+        return {
+            "actual_success": None,
+            "discrepancy": False,
+            "failure_reasons": [f"Process-based analysis failed: {str(e)}"],
+            "help_used": False,
+            "recommendations": ["Consider running analysis separately"],
+            "claude_analysis": f"Analysis failed due to: {str(e)}",
+            "subprocess_error": True
+        }
+    finally:
+        # Clean up temp files
+        try:
+            if 'prompt_file' in locals():
+                os.unlink(prompt_file)
+            if 'script_file' in locals():
+                os.unlink(script_file)
+        except:
+            pass
+
+
 async def claude_analyze_trace(
     trace: List[Dict[str, Any]], 
     scenario_text: str, 
@@ -167,83 +381,44 @@ async def claude_analyze_trace(
         # Extract content in a readable format
         content = ""
         if hasattr(message, "content"):
-            content = str(message.content)[:300]  # Limit length
+            content = str(message.content)[:500]  # Increased limit for better analysis
         elif hasattr(message, "result"):
-            content = str(getattr(message, "result", ""))[:300]
+            content = str(getattr(message, "result", ""))[:500]
         else:
-            content = str(message)[:300]
+            content = str(message)[:500]
             
         trace_summary.append(f"{i}. [{message_class}] {content}")
     
-    # Note: Analysis prompt prepared but not used due to nested SDK call issues
-
     try:
-        # TODO: Temporarily disable nested Claude Code SDK calls due to async context issues
-        # This causes "RuntimeError: Attempted to exit cancel scope in a different task"
-        # when running analysis from within a scenario execution context
-        raise Exception("Nested SDK calls disabled - using enhanced fallback")
+        # Use subprocess-based execution to completely avoid async context issues
+        claude_result = run_claude_analysis_subprocess(
+            trace_summary,
+            scenario_text,
+            tool_name,
+            claimed_success
+        )
+        
+        # Return the Claude analysis result
+        return claude_result
             
-    except Exception:
-        # Enhanced fallback analysis with comprehensive pattern detection
+    except Exception as e:
+        # Minimal fallback - just basic pattern detection
         trace_text = " ".join(trace_summary).lower()
         
-        actual_success = None
+        # Only detect the most obvious failure patterns
         failure_reasons = []
-        help_used = False
-        recommendations = []
-        
-        # Permission and access issues
         if "claude requested permissions" in trace_text or "haven't granted" in trace_text:
-            actual_success = False
-            failure_reasons.append("Permission denied - agent couldn't perform required actions")
-            recommendations.append("Grant necessary tool permissions or configure authentication")
-        
-        if "not authenticated" in trace_text or "authentication failed" in trace_text:
-            actual_success = False
-            failure_reasons.append("Authentication required")
-            recommendations.append("Ensure proper authentication credentials are configured")
-        
-        # Agent explicit failure reports
-        if any(phrase in trace_text for phrase in [
-            "failure", "cannot complete", "unable to", "failed to", "error occurred"
-        ]):
-            actual_success = False
-            failure_reasons.append("Agent reported failure")
-        
-        # Success claims vs reality
-        if any(phrase in trace_text for phrase in [
-            "successfully", "completed", "done", "finished"
-        ]) and actual_success is False:
-            failure_reasons.append("Agent claimed success but evidence suggests failure")
-        
-        # Help usage detection
-        if "--help" in trace_text or "-h" in trace_text or "help flag" in trace_text:
-            help_used = True
-        
-        # CLI usability issues
+            failure_reasons.append("Permission denied")
         if "unknown or unexpected option" in trace_text:
-            failure_reasons.append("CLI syntax error - unknown option used")
-            recommendations.append("Improve CLI help documentation or error messages")
-        
-        if "command not found" in trace_text:
-            failure_reasons.append("Command not found")
-            recommendations.append("Ensure CLI tool is properly installed and in PATH")
-        
-        # Max turns indicates complexity/difficulty
-        if "error_max_turns" in trace_text:
-            recommendations.append("CLI workflow too complex - consider simplifying or better guidance")
-        
-        # Calculate discrepancy
-        discrepancy = False
-        if actual_success is not None and claimed_success is not None:
-            discrepancy = actual_success != claimed_success
+            failure_reasons.append("CLI syntax error")
         
         return {
-            "actual_success": actual_success,
-            "discrepancy": discrepancy,
+            "actual_success": None,
+            "discrepancy": False,
             "failure_reasons": failure_reasons,
-            "help_used": help_used,
-            "recommendations": recommendations,
-            "evidence_summary": f"Enhanced fallback analysis: {len(failure_reasons)} issues detected",
-            "fallback_used": True
+            "help_used": "--help" in trace_text or "-h" in trace_text,
+            "recommendations": ["Claude analysis failed - manual review needed"],
+            "claude_analysis": f"Analysis failed: {str(e)}",
+            "fallback_used": True,
+            "subprocess_error": str(e)
         }

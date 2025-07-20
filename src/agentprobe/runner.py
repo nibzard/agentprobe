@@ -24,7 +24,7 @@ async def run_test(
 
     # Configure options
     options = ClaudeCodeOptions(
-        max_turns=20,
+        max_turns=50,
         cwd=str(work_dir) if work_dir else None,
     )
 

@@ -20,11 +20,11 @@ def print_trace_details(trace, run_label: str = ""):
     """Print detailed trace information for debugging."""
     label = f" {run_label}" if run_label else ""
     typer.echo(f"\n--- Full Trace{label} ---")
-    
+
     if not trace:
         typer.echo("No trace messages found")
         return
-    
+
     # Show summary first
     message_types = {}
     for message in trace:
@@ -32,18 +32,18 @@ def print_trace_details(trace, run_label: str = ""):
         message_class = type(message).__name__
         key = f"{message_class} (type={message_type})"
         message_types[key] = message_types.get(key, 0) + 1
-    
+
     typer.echo(f"Trace Summary: {len(trace)} messages")
     for msg_type, count in message_types.items():
         typer.echo(f"  {count}x {msg_type}")
     typer.echo("")
-    
+
     # Show detailed messages
     for i, message in enumerate(trace):
         message_type = getattr(message, "type", "unknown")
         message_class = type(message).__name__
         typer.echo(f"{i+1}: [{message_class}] type={message_type}")
-        
+
         # Show attributes for debugging
         if hasattr(message, "__dict__"):
             for attr, value in message.__dict__.items():
@@ -61,7 +61,7 @@ def test(
     work_dir: Optional[Path] = typer.Option(
         None, "--work-dir", "-w", help="Working directory"
     ),
-    max_turns: int = typer.Option(20, "--max-turns", help="Maximum agent interactions"),
+    max_turns: int = typer.Option(50, "--max-turns", help="Maximum agent interactions"),
     runs: int = typer.Option(1, "--runs", help="Number of times to run the scenario"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed trace"),
 ):
@@ -73,8 +73,8 @@ def test(
                 # Single run - use enhanced analysis
                 result = await run_test(tool, scenario, work_dir)
                 analysis = await enhanced_analyze_trace(
-                    result["trace"], 
-                    result.get("scenario_text", ""), 
+                    result["trace"],
+                    result.get("scenario_text", ""),
                     result["tool"]
                 )
                 print_report(result, analysis)
@@ -85,25 +85,25 @@ def test(
                 # Multiple runs - collect all results
                 results = []
                 analyses = []
-                
+
                 for run_num in range(1, runs + 1):
                     typer.echo(f"Running {tool}/{scenario} - Run {run_num}/{runs}")
-                    
+
                     result = await run_test(tool, scenario, work_dir)
                     analysis = await enhanced_analyze_trace(
-                        result["trace"], 
-                        result.get("scenario_text", ""), 
+                        result["trace"],
+                        result.get("scenario_text", ""),
                         result["tool"]
                     )
-                    
+
                     results.append(result)
                     analyses.append(analysis)
-                    
+
                     if verbose:
                         typer.echo(f"\n--- Run {run_num} Individual Result ---")
                         print_report(result, analysis)
                         print_trace_details(result["trace"], f"for Run {run_num}")
-                
+
                 # Print aggregate report
                 aggregate_analysis = aggregate_analyses(analyses)
                 print_aggregate_report(results, aggregate_analysis, verbose)
@@ -150,8 +150,8 @@ def benchmark(
                 try:
                     result = await run_test(tool_name, scenario_name)
                     analysis = await enhanced_analyze_trace(
-                        result["trace"], 
-                        result.get("scenario_text", ""), 
+                        result["trace"],
+                        result.get("scenario_text", ""),
                         result["tool"]
                     )
                     print_report(result, analysis)
