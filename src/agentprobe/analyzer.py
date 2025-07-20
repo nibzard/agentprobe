@@ -19,7 +19,16 @@ def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Count assistant turns
     for message in trace:
         message_type = getattr(message, "type", None)
-        if message_type == "assistant":
+        message_class = type(message).__name__
+        
+        # Debug: Track all message types we see
+        if message_type not in [None, "human"]:  # Skip common non-assistant types
+            analysis["observations"].append(f"Debug: Found {message_class} with type='{message_type}'")
+        
+        # Count various types of assistant interactions
+        if (message_type == "assistant" or 
+            message_class in ["AssistantMessage", "TextMessage"] or
+            (hasattr(message, "role") and getattr(message, "role") == "assistant")):
             analysis["total_turns"] += 1
 
             # Extract commands (simplified pattern matching)

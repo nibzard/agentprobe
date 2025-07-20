@@ -16,6 +16,44 @@ app = typer.Typer(
 )
 
 
+def print_trace_details(trace, run_label: str = ""):
+    """Print detailed trace information for debugging."""
+    label = f" {run_label}" if run_label else ""
+    typer.echo(f"\n--- Full Trace{label} ---")
+    
+    if not trace:
+        typer.echo("No trace messages found")
+        return
+    
+    # Show summary first
+    message_types = {}
+    for message in trace:
+        message_type = getattr(message, "type", "unknown")
+        message_class = type(message).__name__
+        key = f"{message_class} (type={message_type})"
+        message_types[key] = message_types.get(key, 0) + 1
+    
+    typer.echo(f"Trace Summary: {len(trace)} messages")
+    for msg_type, count in message_types.items():
+        typer.echo(f"  {count}x {msg_type}")
+    typer.echo("")
+    
+    # Show detailed messages
+    for i, message in enumerate(trace):
+        message_type = getattr(message, "type", "unknown")
+        message_class = type(message).__name__
+        typer.echo(f"{i+1}: [{message_class}] type={message_type}")
+        
+        # Show attributes for debugging
+        if hasattr(message, "__dict__"):
+            for attr, value in message.__dict__.items():
+                if attr not in ["type"]:  # Skip type since we already show it
+                    typer.echo(f"    {attr}: {str(value)[:100]}")
+        else:
+            typer.echo(f"    Raw: {str(message)[:200]}")
+        typer.echo("")  # Add spacing between messages
+
+
 @app.command()
 def test(
     tool: str = typer.Argument(..., help="CLI tool to test (e.g., vercel, gh, docker)"),
@@ -38,18 +76,7 @@ def test(
                 print_report(result, analysis)
 
                 if verbose:
-                    typer.echo("\n--- Full Trace ---")
-                    for i, message in enumerate(result["trace"]):
-                        message_type = getattr(message, "type", "unknown")
-                        message_class = type(message).__name__
-                        typer.echo(f"{i+1}: [{message_class}] type={message_type}")
-                        
-                        # Show attributes for debugging
-                        if hasattr(message, "__dict__"):
-                            for attr, value in message.__dict__.items():
-                                typer.echo(f"    {attr}: {str(value)[:100]}")
-                        else:
-                            typer.echo(f"    Raw: {str(message)[:200]}")
+                    print_trace_details(result["trace"])
             else:
                 # Multiple runs - collect all results
                 results = []
@@ -67,6 +94,7 @@ def test(
                     if verbose:
                         typer.echo(f"\n--- Run {run_num} Individual Result ---")
                         print_report(result, analysis)
+                        print_trace_details(result["trace"], f"for Run {run_num}")
                 
                 # Print aggregate report
                 aggregate_analysis = aggregate_analyses(analyses)

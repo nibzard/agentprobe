@@ -122,7 +122,8 @@ def print_aggregate_report(
         content += "\n[bold]Individual Run Details:[/bold]\n"
         for i, result in enumerate(results, 1):
             run_status = "✓" if result["success"] else "❌"
-            content += f"Run {i}: {run_status} {result['duration_seconds']:.1f}s ${result['cost_usd']:.3f}\n"
+            trace_count = len(result.get("trace", []))
+            content += f"Run {i}: {run_status} {result['duration_seconds']:.1f}s ${result['cost_usd']:.3f} ({trace_count} trace messages)\n"
     
     # Print panel
     console.print(
