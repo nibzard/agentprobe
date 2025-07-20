@@ -1,0 +1,6 @@
+Check the current status of the git repository and report:
+1. The current branch name
+2. Whether there are any uncommitted changes
+3. Whether the branch is up to date with the remote
+
+Use the git status command and provide a clear summary of the repository state.

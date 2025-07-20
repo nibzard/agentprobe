@@ -1,0 +1,9 @@
+Show the last 5 commits in the git repository.
+
+Use the git log command to display:
+- Commit hash (short format)
+- Author name
+- Commit date
+- Commit message
+
+Format the output in a clear, readable way.

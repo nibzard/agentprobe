@@ -1,1 +1,0 @@
-Add a custom domain to the current project. Use example.com as the domain and configure it for the production deployment.

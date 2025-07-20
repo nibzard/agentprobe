@@ -1,1 +1,0 @@
-Deploy the current project to a preview environment (not production). Show the preview URL and verify the deployment status.

@@ -1,0 +1,1 @@
+Set up a KV namespace for the Worker project and perform basic operations. Create a new KV namespace, bind it to the worker, and test storing and retrieving key-value pairs. Verify the KV operations work both locally and in production.

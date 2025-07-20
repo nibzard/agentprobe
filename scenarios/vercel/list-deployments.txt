@@ -1,1 +1,0 @@
-List all recent deployments for the current project. Show the deployment URLs, status, and creation dates.

@@ -1,1 +1,0 @@
-Find the previous deployment and rollback to it. Verify that the rollback was successful and show the active deployment URL.

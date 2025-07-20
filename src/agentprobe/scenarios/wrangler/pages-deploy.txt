@@ -1,0 +1,1 @@
+Deploy a static site or full-stack application to Cloudflare Pages using wrangler pages. Build the project if necessary, then deploy it to Pages. Verify the deployment was successful and the site is accessible via the provided URL.

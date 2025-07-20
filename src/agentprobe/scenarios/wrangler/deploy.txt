@@ -1,0 +1,1 @@
+Deploy the current Worker project to Cloudflare. Make sure to check README.md, DEPLOYMENT.md, PRODUCTION.md or similar file for details if available. Make sure to handle any authentication requirements and confirm the deployment was successful. If there are any configuration issues, try to resolve them or provide clear feedback about what needs to be fixed.

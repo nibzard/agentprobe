@@ -1,1 +1,0 @@
-Initialize a new Vercel project using the Next.js template. Set up the project structure and link it to a Vercel project.

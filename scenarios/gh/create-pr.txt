@@ -1,2 +1,0 @@
-Create a pull request for the current branch with a descriptive title
-and summary of the changes.

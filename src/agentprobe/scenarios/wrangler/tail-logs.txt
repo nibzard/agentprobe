@@ -1,0 +1,1 @@
+Start tailing logs for a deployed Worker to monitor its runtime behavior. Use wrangler tail to stream real-time logs and test that log output appears when the worker handles requests. Verify that different log levels and custom log messages are captured correctly.

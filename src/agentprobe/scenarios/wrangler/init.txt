@@ -1,0 +1,1 @@
+Initialize a new Cloudflare Worker project in the current directory. Use the default template and configure it with appropriate settings for a basic HTTP handler. Make sure all necessary files are created and the project is ready for development.

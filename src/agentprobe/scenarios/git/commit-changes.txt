@@ -1,0 +1,8 @@
+Commit all current changes to the repository with the message "Update configuration files".
+
+Requirements:
+1. First stage all changes using git add
+2. Create a commit with the specified message
+3. Verify the commit was created successfully
+
+Success criteria: The commit should be created and visible in the git log.

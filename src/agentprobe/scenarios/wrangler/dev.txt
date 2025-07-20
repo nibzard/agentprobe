@@ -1,0 +1,1 @@
+Start a local development server for the Worker project using wrangler dev. Make sure the server starts successfully and is accessible. Test that the worker responds to HTTP requests correctly and that hot reloading works for code changes.
