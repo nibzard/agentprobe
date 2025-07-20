@@ -59,3 +59,50 @@ def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
         )
 
     return analysis
+
+
+def aggregate_analyses(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Aggregate multiple analysis results into summary statistics."""
+    if not analyses:
+        return {}
+    
+    total_runs = len(analyses)
+    success_count = sum(1 for analysis in analyses if analysis["success"])
+    
+    aggregate = {
+        "total_runs": total_runs,
+        "success_count": success_count,
+        "success_rate": success_count / total_runs,
+        "avg_turns": sum(analysis["total_turns"] for analysis in analyses) / total_runs,
+        "min_turns": min(analysis["total_turns"] for analysis in analyses),
+        "max_turns": max(analysis["total_turns"] for analysis in analyses),
+        "total_errors": sum(len(analysis["errors_encountered"]) for analysis in analyses),
+        "help_usage_rate": sum(1 for analysis in analyses if analysis["help_used"]) / total_runs,
+        "common_observations": [],
+        "common_recommendations": [],
+    }
+    
+    # Collect unique observations and recommendations
+    all_observations = []
+    all_recommendations = []
+    
+    for analysis in analyses:
+        all_observations.extend(analysis["observations"])
+        all_recommendations.extend(analysis["recommendations"])
+    
+    # Find common patterns (appearing in multiple runs)
+    from collections import Counter
+    obs_counts = Counter(all_observations)
+    rec_counts = Counter(all_recommendations)
+    
+    # Include observations/recommendations that appear in at least 20% of runs
+    threshold = max(1, total_runs * 0.2)
+    
+    aggregate["common_observations"] = [
+        obs for obs, count in obs_counts.items() if count >= threshold
+    ]
+    aggregate["common_recommendations"] = [
+        rec for rec, count in rec_counts.items() if count >= threshold
+    ]
+    
+    return aggregate

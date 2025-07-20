@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Optional
 
 from .runner import run_test
-from .analyzer import analyze_trace
-from .reporter import print_report
+from .analyzer import analyze_trace, aggregate_analyses
+from .reporter import print_report, print_aggregate_report
 
 app = typer.Typer(
     name="agentprobe",
@@ -24,29 +24,53 @@ def test(
         None, "--work-dir", "-w", help="Working directory"
     ),
     max_turns: int = typer.Option(20, "--max-turns", help="Maximum agent interactions"),
+    runs: int = typer.Option(1, "--runs", help="Number of times to run the scenario"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed trace"),
 ):
     """Run a test scenario against a CLI tool."""
 
     async def _run():
         try:
-            result = await run_test(tool, scenario, work_dir)
-            analysis = analyze_trace(result["trace"])
-            print_report(result, analysis)
+            if runs == 1:
+                # Single run - use existing logic
+                result = await run_test(tool, scenario, work_dir)
+                analysis = analyze_trace(result["trace"])
+                print_report(result, analysis)
 
-            if verbose:
-                typer.echo("\n--- Full Trace ---")
-                for i, message in enumerate(result["trace"]):
-                    message_type = getattr(message, "type", "unknown")
-                    message_class = type(message).__name__
-                    typer.echo(f"{i+1}: [{message_class}] type={message_type}")
+                if verbose:
+                    typer.echo("\n--- Full Trace ---")
+                    for i, message in enumerate(result["trace"]):
+                        message_type = getattr(message, "type", "unknown")
+                        message_class = type(message).__name__
+                        typer.echo(f"{i+1}: [{message_class}] type={message_type}")
+                        
+                        # Show attributes for debugging
+                        if hasattr(message, "__dict__"):
+                            for attr, value in message.__dict__.items():
+                                typer.echo(f"    {attr}: {str(value)[:100]}")
+                        else:
+                            typer.echo(f"    Raw: {str(message)[:200]}")
+            else:
+                # Multiple runs - collect all results
+                results = []
+                analyses = []
+                
+                for run_num in range(1, runs + 1):
+                    typer.echo(f"Running {tool}/{scenario} - Run {run_num}/{runs}")
                     
-                    # Show attributes for debugging
-                    if hasattr(message, "__dict__"):
-                        for attr, value in message.__dict__.items():
-                            typer.echo(f"    {attr}: {str(value)[:100]}")
-                    else:
-                        typer.echo(f"    Raw: {str(message)[:200]}")
+                    result = await run_test(tool, scenario, work_dir)
+                    analysis = analyze_trace(result["trace"])
+                    
+                    results.append(result)
+                    analyses.append(analysis)
+                    
+                    if verbose:
+                        typer.echo(f"\n--- Run {run_num} Individual Result ---")
+                        print_report(result, analysis)
+                
+                # Print aggregate report
+                aggregate_analysis = aggregate_analyses(analyses)
+                print_aggregate_report(results, aggregate_analysis, verbose)
 
         except FileNotFoundError as e:
             typer.echo(f"Error: {e}", err=True)
