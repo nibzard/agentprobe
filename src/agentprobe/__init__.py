@@ -6,7 +6,7 @@ from .runner import run_test
 from .analyzer import analyze_trace
 from .reporter import print_report
 
-__all__ = ["run_test", "analyze_trace", "print_report"]
+__all__ = ["run_test", "analyze_trace", "print_report", "test_cli"]
 
 
 async def test_cli(tool: str, scenario: str, work_dir=None):

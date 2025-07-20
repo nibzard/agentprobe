@@ -5,11 +5,17 @@ Test how well AI agents interact with your CLI tools. AgentProbe runs Claude Cod
 ## Quick Start
 
 ```bash
-# No installation needed - just run with uvx
-uvx agentprobe test vercel --scenario deploy
+# Install dependencies
+uv sync
 
-# Or install locally
-pip install agentprobe
+# Test a single scenario
+uv run agentprobe test vercel --scenario deploy
+
+# Run all benchmarks
+uv run agentprobe benchmark --all
+
+# Test specific tool
+uv run agentprobe benchmark gh
 ```
 
 ## What It Does
@@ -34,16 +40,36 @@ Help us build a comprehensive benchmark of CLI tools! The table below shows how 
 
 [View detailed results →](scenarios/RESULTS.md)
 
-## Usage
+## Commands
 
-Test any CLI tool by creating a simple text file with a prompt:
+### Test Individual Scenarios
 
 ```bash
-# Create a scenario
-echo "Deploy this app to production" > scenarios/vercel/deploy.txt
+# Test a specific scenario
+uv run agentprobe test <tool> --scenario <name>
 
-# Run the test
-agentprobe test vercel --scenario deploy
+# With custom working directory
+uv run agentprobe test docker --scenario run-nginx --work-dir /path/to/project
+
+# Show detailed trace
+uv run agentprobe test gh --scenario create-pr --verbose
+```
+
+### Benchmark Tools
+
+```bash
+# Test all scenarios for one tool
+uv run agentprobe benchmark vercel
+
+# Test all available tools and scenarios
+uv run agentprobe benchmark --all
+```
+
+### Reports
+
+```bash
+# Generate reports (future feature)
+uv run agentprobe report --format markdown --output results.md
 ```
 
 ## Example Output
@@ -52,11 +78,16 @@ agentprobe test vercel --scenario deploy
 ╭─ AgentProbe Results ─────────────────────────────────────╮
 │ Tool: vercel | Scenario: deploy                         │
 │ Status: ✓ SUCCESS | Duration: 23.4s | Cost: $0.012     │
-├──────────────────────────────────────────────────────────┤
+│                                                          │
 │ Summary:                                                 │
-│ • Successfully deployed to https://app-xi.vercel.app     │
-│ • Agent needed 2 attempts to find correct deploy flag   │
-│ • Consider adding examples to your --help output        │
+│ • Task completed successfully                            │
+│ • Required 3 turns to complete                          │
+│                                                          │
+│ Observations:                                            │
+│ • Agent used help flag to understand the CLI            │
+│                                                          │
+│ Recommendations:                                         │
+│ • Consider improving error messages to be more actionable│
 ╰──────────────────────────────────────────────────────────╯
 ```
 
@@ -83,31 +114,73 @@ add a test credit card. Return the customer ID.
 
 ```bash
 # Test all scenarios for a tool
-agentprobe benchmark vercel
+uv run agentprobe benchmark vercel
 
 # Test all tools
-agentprobe benchmark --all
+uv run agentprobe benchmark --all
 
-# Generate report
-agentprobe report --format markdown > scenarios/RESULTS.md
+# Generate report (placeholder)
+uv run agentprobe report --format markdown
 ```
+
+## Architecture
+
+AgentProbe follows a simple 4-component architecture:
+
+1. **CLI Layer** (`cli.py`) - Typer-based command interface
+2. **Runner** (`runner.py`) - Executes scenarios via Claude Code SDK  
+3. **Analyzer** (`analyzer.py`) - Generic pattern analysis on execution traces
+4. **Reporter** (`reporter.py`) - Rich terminal formatting for results
 
 ## Requirements
 
 - Python 3.10+
-- Claude Code CLI: `npm install -g @anthropic-ai/claude-code`
+- uv package manager
+- Claude Code SDK (automatically installed)
 
-## Popular Scenarios
+## Available Scenarios
 
-Browse our growing collection of test scenarios:
+Current test scenarios included:
 
-- **Deployment Tools**: vercel, netlify, heroku, fly.io
-- **Package Managers**: npm, yarn, pip, cargo
-- **Cloud CLIs**: aws, gcloud, azure
-- **Dev Tools**: git, gh, docker, kubectl
-- **Databases**: psql, mysql, redis-cli
+- **GitHub CLI** (`gh/`)
+  - `create-pr.txt` - Create pull requests
+- **Vercel** (`vercel/`)
+  - `deploy.txt` - Deploy applications
+- **Docker** (`docker/`)
+  - `run-nginx.txt` - Run nginx containers
 
 [Browse all scenarios →](scenarios/)
+
+## Development
+
+```bash
+# Install with dev dependencies
+uv sync --extra dev
+
+# Format code
+uv run black src/
+
+# Lint code  
+uv run ruff check src/
+
+# Run tests (when implemented)
+uv run pytest
+```
+
+## Programmatic Usage
+
+```python
+import asyncio
+from agentprobe import test_cli
+
+async def main():
+    result = await test_cli("gh", "create-pr")
+    print(f"Success: {result['success']}")
+    print(f"Duration: {result['duration_seconds']}s") 
+    print(f"Cost: ${result['cost_usd']:.3f}")
+
+asyncio.run(main())
+```
 
 ## License
 
