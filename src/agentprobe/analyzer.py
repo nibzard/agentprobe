@@ -1,7 +1,7 @@
 """Generic analysis of CLI execution traces."""
 
 from typing import List, Dict, Any
-from claude_code_sdk import ResultMessage, query, ClaudeCodeOptions
+from claude_code_sdk import ResultMessage
 
 
 def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -86,7 +86,7 @@ async def enhanced_analyze_trace(
             # Note if fallback was used
             if claude_analysis.get("fallback_used"):
                 enhanced_analysis["observations"].append(
-                    "⚠️ Using fallback analysis (Claude Code SDK error)"
+                    "⚠️ Using enhanced fallback analysis (nested SDK calls disabled)"
                 )
             
             # Store Claude analysis for reporting
@@ -175,131 +175,63 @@ async def claude_analyze_trace(
             
         trace_summary.append(f"{i}. [{message_class}] {content}")
     
-    # Create comprehensive analysis prompt
-    analysis_prompt = f"""Analyze this CLI interaction trace. An AI agent was asked to: "{scenario_text}"
-
-Tool being tested: {tool_name}
-
-Interaction trace:
-{chr(10).join(trace_summary)}
-
-Provide a comprehensive analysis covering:
-
-1. SUCCESS ASSESSMENT:
-   - Did the task actually complete successfully based on evidence?
-   - Are there discrepancies between claimed success and actual results?
-   - Look for permission denials, authentication failures, or tool errors that were ignored
-
-2. AGENT BEHAVIOR ANALYSIS:
-   - Did the agent use help flags (--help, -h) appropriately?
-   - How did the agent handle errors or obstacles?
-   - Were there any missed opportunities for better CLI usage?
-
-3. CLI USABILITY INSIGHTS:
-   - What makes this CLI easy/difficult for AI agents to use?
-   - Are error messages clear and actionable?
-   - Is help documentation discoverable and useful?
-
-4. SPECIFIC ISSUES:
-   - List any permission denials, authentication problems, or tool failures
-   - Identify false positive scenarios where success was claimed incorrectly
-   - Note any CLI design issues that caused problems
-
-5. RECOMMENDATIONS:
-   - Suggest improvements for CLI usability with AI agents
-   - Recommend better error handling or documentation
-
-Be thorough and specific in your analysis."""
+    # Note: Analysis prompt prepared but not used due to nested SDK call issues
 
     try:
-        # Use Claude Code SDK for analysis (same as scenario execution)
-        options = ClaudeCodeOptions(max_turns=1)  # Single analysis turn
-        
-        claude_response = ""
-        async for message in query(prompt=analysis_prompt, options=options):
-            # Extract the response content
-            if hasattr(message, "content"):
-                content = str(message.content)
-                # Handle list of TextBlocks
-                if "[TextBlock(" in content:
-                    import re
-                    text_matches = re.findall(r'TextBlock\(text="([^"]*)"', content)
-                    if text_matches:
-                        claude_response = " ".join(text_matches)
-                else:
-                    claude_response = content
-                break
-        
-        if claude_response:
-            # Parse Claude's comprehensive response
-            response_lower = claude_response.lower()
+        # TODO: Temporarily disable nested Claude Code SDK calls due to async context issues
+        # This causes "RuntimeError: Attempted to exit cancel scope in a different task"
+        # when running analysis from within a scenario execution context
+        raise Exception("Nested SDK calls disabled - using enhanced fallback")
             
-            # Extract success assessment
-            actual_success = None
-            if any(phrase in response_lower for phrase in [
-                "did not actually succeed", "task failed", "not successful", "unsuccessful"
-            ]):
-                actual_success = False
-            elif any(phrase in response_lower for phrase in [
-                "task succeeded", "completed successfully", "successful", "accomplished"
-            ]):
-                actual_success = True
-                
-            # Check for discrepancy mentions
-            discrepancy = any(phrase in response_lower for phrase in [
-                "discrepancy", "false positive", "claimed success", "incorrectly reported"
-            ])
-            
-            # Extract failure reasons and issues
-            failure_reasons = []
-            if "permission denied" in response_lower:
-                failure_reasons.append("Permission denied")
-            if "authentication" in response_lower and ("failed" in response_lower or "required" in response_lower):
-                failure_reasons.append("Authentication required")
-            if "not authenticated" in response_lower:
-                failure_reasons.append("Not authenticated")
-            if "access denied" in response_lower:
-                failure_reasons.append("Access denied")
-                
-            # Extract help usage insights
-            help_used = any(phrase in response_lower for phrase in [
-                "used help", "help flag", "--help", "-h"
-            ])
-            
-            # Extract recommendations (look for recommendation sections)
-            recommendations = []
-            if "recommend" in response_lower:
-                # This is basic - Claude's full response will be in observations
-                recommendations.append("See detailed Claude analysis for specific recommendations")
-                
-            return {
-                "actual_success": actual_success,
-                "discrepancy": discrepancy,
-                "failure_reasons": failure_reasons,
-                "help_used": help_used,
-                "recommendations": recommendations,
-                "evidence_summary": claude_response[:300] + "..." if len(claude_response) > 300 else claude_response,
-                "claude_analysis": claude_response
-            }
-        else:
-            # No response received
-            raise Exception("No response from Claude Code SDK")
-            
-    except Exception as e:
-        # Fallback to basic pattern detection
+    except Exception:
+        # Enhanced fallback analysis with comprehensive pattern detection
         trace_text = " ".join(trace_summary).lower()
         
         actual_success = None
         failure_reasons = []
+        help_used = False
+        recommendations = []
         
+        # Permission and access issues
         if "claude requested permissions" in trace_text or "haven't granted" in trace_text:
             actual_success = False
             failure_reasons.append("Permission denied - agent couldn't perform required actions")
+            recommendations.append("Grant necessary tool permissions or configure authentication")
         
-        # Check for agent claiming failure
-        if "failure" in trace_text or "cannot complete" in trace_text:
+        if "not authenticated" in trace_text or "authentication failed" in trace_text:
+            actual_success = False
+            failure_reasons.append("Authentication required")
+            recommendations.append("Ensure proper authentication credentials are configured")
+        
+        # Agent explicit failure reports
+        if any(phrase in trace_text for phrase in [
+            "failure", "cannot complete", "unable to", "failed to", "error occurred"
+        ]):
             actual_success = False
             failure_reasons.append("Agent reported failure")
+        
+        # Success claims vs reality
+        if any(phrase in trace_text for phrase in [
+            "successfully", "completed", "done", "finished"
+        ]) and actual_success is False:
+            failure_reasons.append("Agent claimed success but evidence suggests failure")
+        
+        # Help usage detection
+        if "--help" in trace_text or "-h" in trace_text or "help flag" in trace_text:
+            help_used = True
+        
+        # CLI usability issues
+        if "unknown or unexpected option" in trace_text:
+            failure_reasons.append("CLI syntax error - unknown option used")
+            recommendations.append("Improve CLI help documentation or error messages")
+        
+        if "command not found" in trace_text:
+            failure_reasons.append("Command not found")
+            recommendations.append("Ensure CLI tool is properly installed and in PATH")
+        
+        # Max turns indicates complexity/difficulty
+        if "error_max_turns" in trace_text:
+            recommendations.append("CLI workflow too complex - consider simplifying or better guidance")
         
         # Calculate discrepancy
         discrepancy = False
@@ -310,6 +242,8 @@ Be thorough and specific in your analysis."""
             "actual_success": actual_success,
             "discrepancy": discrepancy,
             "failure_reasons": failure_reasons,
-            "evidence_summary": f"Fallback analysis - Claude Code SDK error: {str(e)}",
+            "help_used": help_used,
+            "recommendations": recommendations,
+            "evidence_summary": f"Enhanced fallback analysis: {len(failure_reasons)} issues detected",
             "fallback_used": True
         }

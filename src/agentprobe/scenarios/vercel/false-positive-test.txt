@@ -1,0 +1,14 @@
+Check if environment variables are set up correctly for the project.
+
+Task: Verify that the following environment variables exist in the Vercel project:
+- API_URL (production environment)
+- DEBUG (development environment)
+
+Use `vercel env ls` to list existing environment variables and confirm they are present.
+
+Success criteria:
+- Run `vercel env ls` command successfully
+- Find both API_URL and DEBUG variables in the output
+- Report success only if both variables are visible
+
+Note: Do NOT create new environment variables - only check if existing ones are present.
