@@ -1,0 +1,13 @@
+---
+version: 2
+created: 2025-01-22
+updated: 2025-01-22
+tool: vercel
+permission_mode: acceptEdits
+allowed_tools: [Read, Write, Bash]
+model: sonnet
+complexity: simple
+expected_turns: 3-5
+description: "Simple version check"
+---
+Check if Vercel CLI is installed and show the current version.

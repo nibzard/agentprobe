@@ -74,7 +74,7 @@ def test(
         try:
             if runs == 1:
                 # Single run - use enhanced analysis
-                result = await run_test(tool, scenario, work_dir, oauth_token_file)
+                result = await run_test(tool, scenario, work_dir, oauth_token_file, show_progress=not verbose)
                 analysis = await enhanced_analyze_trace(
                     result["trace"],
                     result.get("scenario_text", ""),
@@ -93,7 +93,7 @@ def test(
                 for run_num in range(1, runs + 1):
                     typer.echo(f"Running {tool}/{scenario} - Run {run_num}/{runs}")
 
-                    result = await run_test(tool, scenario, work_dir, oauth_token_file)
+                    result = await run_test(tool, scenario, work_dir, oauth_token_file, show_progress=not verbose)
                     analysis = await enhanced_analyze_trace(
                         result["trace"],
                         result.get("scenario_text", ""),
