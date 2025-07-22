@@ -1,6 +1,6 @@
 # AgentProbe
 
-Test how well AI agents interact with your CLI tools. AgentProbe runs Claude Code against any command-line tool and tells you where it struggles.
+Test how well AI agents interact with your CLI tools. AgentProbe runs Claude Code against any command-line tool and provides actionable insights to improve Agent Experience (AX) - helping CLI developers make their tools more AI-friendly.
 
 ## Quick Start
 
@@ -63,10 +63,11 @@ export CLAUDE_CODE_OAUTH_TOKEN="your-oauth-token-here"
 
 ## What It Does
 
-AgentProbe launches Claude Code to test CLI tools and provides insights on:
-- Where agents get confused by your CLI
-- Which commands fail and why
-- How to improve your CLI's AI-friendliness
+AgentProbe launches Claude Code to test CLI tools and provides **Agent Experience (AX)** insights on:
+- **AX Score** (A-F) based on turn count and success rate
+- **CLI Friction Points** - specific issues that confuse agents
+- **Actionable Improvements** - concrete changes to reduce agent friction
+- **Real-time Progress** - see agent progress with live turn counts
 
 ## Community Benchmark
 
@@ -91,10 +92,13 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --sc
 # With authentication token file
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --oauth-token-file ~/.agentprobe-token
 
+# Test multiple runs for consistency analysis
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test vercel --scenario deploy --runs 5
+
 # With custom working directory
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test docker --scenario run-nginx --work-dir /path/to/project
 
-# Show detailed trace with message debugging
+# Show detailed trace with message debugging (disables progress indicators)
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --verbose
 ```
 
@@ -135,21 +139,56 @@ Verbose output includes:
 
 ## Example Output
 
+### Single Run (Default)
 ```
-╭─ AgentProbe Results ─────────────────────────────────────╮
-│ Tool: vercel | Scenario: deploy                         │
-│ Status: ✓ SUCCESS | Duration: 23.4s | Cost: $0.012     │
-│                                                          │
-│ Summary:                                                 │
-│ • Task completed successfully                            │
-│ • Required 3 turns to complete                          │
-│                                                          │
-│ Observations:                                            │
-│ • Agent used help flag to understand the CLI            │
-│                                                          │
-│ Recommendations:                                         │
-│ • Consider improving error messages to be more actionable│
-╰──────────────────────────────────────────────────────────╯
+⠋ Agent running... (Turn 3, 12s)
+╭───────────────────────────── AgentProbe Results ─────────────────────────────╮
+│ Tool: vercel | Scenario: deploy                                               │
+│ AX Score: B (12 turns, 80% success rate)                                      │
+│                                                                               │
+│ Agent Experience Summary:                                                     │
+│ Agent completed deployment but needed extra turns due to unclear progress     │
+│ feedback and ambiguous success indicators.                                    │
+│                                                                               │
+│ CLI Friction Points:                                                          │
+│ • No progress feedback during build process                                   │
+│ • Deployment URL returned before actual completion                            │
+│ • Success status ambiguous ("building" vs "deployed")                        │
+│                                                                               │
+│ Top Improvements for CLI:                                                     │
+│ 1. Add --status flag to check deployment progress                             │
+│ 2. Include completion status in deployment output                             │
+│ 3. Provide structured --json output for programmatic usage                    │
+│                                                                               │
+│ Expected turns: 5-8 | Duration: 23.4s | Cost: $0.012                         │
+│                                                                               │
+│ Use --verbose for full trace analysis                                         │
+╰───────────────────────────────────────────────────────────────────────────────╯
+```
+
+### Multiple Runs (Aggregate)
+```
+╭──────────────────────── AgentProbe Aggregate Results ────────────────────────╮
+│ Tool: vercel | Scenario: deploy                                               │
+│ AX Score: C (14.2 avg turns, 60% success rate) | Runs: 5                      │
+│                                                                               │
+│ Consistency Analysis:                                                         │
+│ • Turn variance: 8-22 turns                                                   │
+│ • Success consistency: 60% of runs succeeded                                  │
+│ • Agent confusion points: 18 total friction events                            │
+│                                                                               │
+│ Consistent CLI Friction Points:                                               │
+│ • Permission errors lack clear remediation steps                              │
+│ • No progress feedback during deployment                                      │
+│ • Build failures don't suggest next steps                                     │
+│                                                                               │
+│ Priority Improvements for CLI:                                                │
+│ 1. Add deployment status polling with vercel status                           │
+│ 2. Include troubleshooting hints in error messages                            │
+│ 3. Provide progress indicators during long operations                          │
+│                                                                               │
+│ Avg duration: 45.2s | Total cost: $0.156                                      │
+╰───────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ## Contributing Scenarios
@@ -163,6 +202,7 @@ We welcome scenario contributions! Help us test more CLI tools:
 
 ### Scenario Format
 
+#### Simple Text Format
 Create simple text files with clear prompts:
 
 ```
@@ -170,6 +210,36 @@ Create simple text files with clear prompts:
 Create a new Stripe customer with email test@example.com and
 add a test credit card. Return the customer ID.
 ```
+
+#### Enhanced YAML Format (Recommended)
+Use YAML frontmatter for better control and metadata:
+
+```yaml
+# scenarios/vercel/deploy-complex.txt
+---
+version: 2
+created: 2025-01-22
+tool: vercel
+permission_mode: acceptEdits
+allowed_tools: [Read, Write, Bash]
+model: opus
+max_turns: 15
+complexity: complex
+expected_turns: 8-12
+description: "Production deployment with environment setup"
+---
+Deploy this Next.js application to production using Vercel CLI.
+Configure production environment variables and ensure the deployment
+is successful with proper domain configuration.
+```
+
+**YAML Frontmatter Options:**
+- `model`: Override default model (`sonnet`, `opus`)
+- `max_turns`: Limit agent interactions 
+- `permission_mode`: Set permissions (`acceptEdits`, `default`, `plan`, `bypassPermissions`)
+- `allowed_tools`: Specify tools (`[Read, Write, Bash]`)
+- `expected_turns`: Range for AX scoring comparison
+- `complexity`: Scenario difficulty (`simple`, `medium`, `complex`)
 
 ### Running Benchmark Tests
 
@@ -188,16 +258,44 @@ uv run agentprobe report --format markdown
 
 AgentProbe follows a simple 4-component architecture:
 
-1. **CLI Layer** (`cli.py`) - Typer-based command interface
-2. **Runner** (`runner.py`) - Executes scenarios via Claude Code SDK
-3. **Analyzer** (`analyzer.py`) - Generic pattern analysis on execution traces
-4. **Reporter** (`reporter.py`) - Rich terminal formatting for results
+1. **CLI Layer** (`cli.py`) - Typer-based command interface with progress indicators
+2. **Runner** (`runner.py`) - Executes scenarios via Claude Code SDK with YAML frontmatter support
+3. **Analyzer** (`analyzer.py`) - AI-powered analysis using Claude to identify friction points
+4. **Reporter** (`reporter.py`) - AX-focused output for CLI developers
+
+### Agent Experience (AX) Analysis
+
+AgentProbe uses Claude itself to analyze agent interactions, providing:
+
+- **Intelligent Analysis**: Claude analyzes execution traces to identify specific friction points
+- **AX Scoring**: Automatic scoring based on turn efficiency and success patterns
+- **Contextual Recommendations**: Actionable improvements tailored to each CLI tool
+- **Consistency Tracking**: Multi-run analysis to identify systematic issues
+
+This approach avoids hardcoded patterns and provides nuanced, tool-specific insights that help CLI developers understand exactly where their tools create friction for AI agents.
 
 ## Requirements
 
 - Python 3.10+
 - uv package manager
 - Claude Code SDK (automatically installed)
+
+## Key Features
+
+### 🎯 Agent Experience (AX) Focus
+- **AX Scores** (A-F) based on turn efficiency and success rate
+- **Friction Point Analysis** identifies specific CLI pain points
+- **Actionable Recommendations** for CLI developers
+
+### 📊 Progress & Feedback
+- **Real-time Progress** with live turn count and elapsed time
+- **Consistency Analysis** across multiple runs
+- **Expected vs Actual** turn comparison using YAML metadata
+
+### 🔧 Advanced Scenario Control
+- **YAML Frontmatter** for model selection, permissions, turn limits
+- **Multiple Authentication** methods with process isolation
+- **Flexible Tool Configuration** per scenario
 
 ## Available Scenarios
 
@@ -207,7 +305,7 @@ Current test scenarios included:
   - `create-pr.txt` - Create pull requests
 - **Vercel** (`vercel/`)
   - `deploy.txt` - Deploy applications to production
-  - `preview-deploy.txt` - Deploy to preview environment
+  - `preview-deploy.txt` - Deploy to preview environment  
   - `init-project.txt` - Initialize new project with template
   - `env-setup.txt` - Configure environment variables
   - `list-deployments.txt` - List recent deployments
@@ -215,8 +313,12 @@ Current test scenarios included:
   - `rollback.txt` - Rollback to previous deployment
   - `logs.txt` - View deployment logs
   - `build-local.txt` - Build project locally
+  - `ax-test.txt` - Simple version check (AX demo)
+  - `yaml-options-test.txt` - YAML frontmatter demo
 - **Docker** (`docker/`)
   - `run-nginx.txt` - Run nginx containers
+- **Wrangler (Cloudflare)** (`wrangler/`)
+  - Multiple deployment and development scenarios
 
 [Browse all scenarios →](scenarios/)
 
