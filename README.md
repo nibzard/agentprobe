@@ -13,6 +13,54 @@ uv sync
 uv run agentprobe test vercel --scenario deploy
 ```
 
+## Authentication
+
+AgentProbe supports multiple authentication methods to avoid environment pollution:
+
+### Get an OAuth Token
+
+First, obtain your OAuth token using Claude Code:
+
+```bash
+claude setup-token
+```
+
+This will guide you through the OAuth flow and provide a token for authentication.
+
+### Method 1: Token File (Recommended)
+```bash
+# Store token in a file (replace with your actual token from claude setup-token)
+echo "your-oauth-token-here" > ~/.agentprobe-token
+
+# Use with commands
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test vercel --scenario deploy --oauth-token-file ~/.agentprobe-token
+```
+
+### Method 2: Config Files
+Create a config file in one of these locations (checked in priority order):
+
+```bash
+# Global user config (replace with your actual token from claude setup-token)
+mkdir -p ~/.agentprobe
+echo "your-oauth-token-here" > ~/.agentprobe/config
+
+# Project-specific config (add to .gitignore)
+echo "your-oauth-token-here" > .agentprobe
+echo ".agentprobe" >> .gitignore
+
+# Then run normally without additional flags
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test vercel --scenario deploy
+```
+
+### Method 3: Environment Variables (Legacy)
+```bash
+# Replace with your actual token from claude setup-token
+export CLAUDE_CODE_OAUTH_TOKEN="your-oauth-token-here"
+# Note: This may affect other Claude CLI processes
+```
+
+**Recommendation**: Use token files or config files for better process isolation.
+
 ## What It Does
 
 AgentProbe launches Claude Code to test CLI tools and provides insights on:
@@ -40,6 +88,9 @@ Help us build a comprehensive benchmark of CLI tools! The table below shows how 
 # Test a specific scenario (with uvx)
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr
 
+# With authentication token file
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --oauth-token-file ~/.agentprobe-token
+
 # With custom working directory
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test docker --scenario run-nginx --work-dir /path/to/project
 
@@ -52,6 +103,9 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --sc
 ```bash
 # Test all scenarios for one tool
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark vercel
+
+# Test all scenarios with authentication
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark vercel --oauth-token-file ~/.agentprobe-token
 
 # Test all available tools and scenarios
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark --all

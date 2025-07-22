@@ -1,13 +1,15 @@
 """Generic analysis of CLI execution traces."""
 
-from typing import List, Dict, Any
-from claude_code_sdk import ResultMessage, query, ClaudeCodeOptions
-import concurrent.futures
-import anyio
-import asyncio
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+from claude_code_sdk import ResultMessage
 import json
 import tempfile
 import os
+import subprocess
+import sys
+
+from .config import load_oauth_token
 
 
 def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -41,7 +43,8 @@ def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def enhanced_analyze_trace(
     trace: List[Dict[str, Any]], 
     scenario_text: str = "", 
-    tool_name: str = ""
+    tool_name: str = "",
+    oauth_token_file: Optional[Path] = None
 ) -> Dict[str, Any]:
     """Enhanced analysis combining traditional patterns with LLM insights."""
     
@@ -53,7 +56,8 @@ async def enhanced_analyze_trace(
         try:
             claude_analysis = await claude_analyze_trace(
                 trace, scenario_text, tool_name, 
-                claimed_success=traditional_analysis["success"]
+                claimed_success=traditional_analysis["success"],
+                oauth_token_file=oauth_token_file
             )
             
             # Merge analyses
@@ -66,28 +70,19 @@ async def enhanced_analyze_trace(
                     "⚠️ Claude detected discrepancy between claimed and actual success"
                 )
             
-            # Use Claude's insights to populate all fields
+            # Use Claude's insights to populate all fields - no hardcoded patterns
             if claude_analysis.get("failure_reasons"):
-                enhanced_analysis["observations"].extend([
-                    f"🔍 Claude Analysis: {reason}" for reason in claude_analysis["failure_reasons"]
-                ])
+                enhanced_analysis["observations"].extend(claude_analysis["failure_reasons"])
             
-            # Add Claude's recommendations
+            # Add Claude's recommendations directly
             if claude_analysis.get("recommendations"):
                 enhanced_analysis["recommendations"].extend(claude_analysis["recommendations"])
             
-            # Add help usage insight from Claude
-            if claude_analysis.get("help_used") is not None:
-                if claude_analysis["help_used"]:
-                    enhanced_analysis["observations"].append("🔍 Claude detected agent used help flags appropriately")
-                else:
-                    enhanced_analysis["observations"].append("🔍 Claude noted agent did not use help flags")
+            # Store help usage for reporting without hardcoded messages
+            enhanced_analysis["help_used"] = claude_analysis.get("help_used", False)
             
-            # Add Claude's full analysis as evidence
-            if claude_analysis.get("claude_analysis"):
-                enhanced_analysis["observations"].append(
-                    f"📋 Full Claude Analysis: {claude_analysis['claude_analysis'][:500]}..."
-                )
+            # Store Claude's analysis for detailed reporting
+            enhanced_analysis["claude_analysis"] = claude_analysis.get("claude_analysis", "")
             
             # Note analysis method used
             if claude_analysis.get("subprocess_error"):
@@ -332,13 +327,34 @@ if __name__ == "__main__":
             f.write(analysis_script)
             script_file = f.name
         
+        # Load OAuth token and create isolated environment for subprocess
+        oauth_token = load_oauth_token(oauth_token_file)
+        env = os.environ.copy()
+        
+        # Debug logging for subprocess
+        print(f"[DEBUG analyzer] OAuth token loaded: {'Yes' if oauth_token else 'No'}")
+        if oauth_token:
+            print(f"[DEBUG analyzer] OAuth token length: {len(oauth_token)}")
+            print(f"[DEBUG analyzer] OAuth token prefix: {oauth_token[:15]}...")
+            env["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
+            print(f"[DEBUG analyzer] Set CLAUDE_CODE_OAUTH_TOKEN in subprocess environment")
+            
+            # CRITICAL: Remove API key from subprocess to force OAuth usage
+            if env.get("ANTHROPIC_API_KEY"):
+                print(f"[DEBUG analyzer] Removing ANTHROPIC_API_KEY from subprocess to force OAuth usage")
+                del env["ANTHROPIC_API_KEY"]
+        
+        # Check what auth methods are available
+        print(f"[DEBUG analyzer] Subprocess env CLAUDE_CODE_OAUTH_TOKEN: {'Set' if env.get('CLAUDE_CODE_OAUTH_TOKEN') else 'Not set'}")
+        print(f"[DEBUG analyzer] Subprocess env ANTHROPIC_API_KEY: {'Set' if env.get('ANTHROPIC_API_KEY') else 'Not set'}")
+        
         # Run the analysis script in subprocess
         result = subprocess.run(
             [sys.executable, script_file],
             capture_output=True,
             text=True,
             timeout=120,  # 2 minute timeout
-            env=os.environ.copy()  # Pass environment variables
+            env=env
         )
         
         # Parse the JSON output
@@ -403,7 +419,7 @@ if __name__ == "__main__":
                 os.unlink(prompt_file)
             if 'script_file' in locals():
                 os.unlink(script_file)
-        except:
+        except OSError:
             pass
 
 
@@ -411,7 +427,8 @@ async def claude_analyze_trace(
     trace: List[Dict[str, Any]], 
     scenario_text: str, 
     tool_name: str,
-    claimed_success: bool = None
+    claimed_success: bool = None,
+    oauth_token_file: Optional[Path] = None
 ) -> Dict[str, Any]:
     """Use Claude Code SDK to analyze trace for better success/failure detection."""
     

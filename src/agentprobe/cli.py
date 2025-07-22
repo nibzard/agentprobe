@@ -64,6 +64,9 @@ def test(
     max_turns: int = typer.Option(50, "--max-turns", help="Maximum agent interactions"),
     runs: int = typer.Option(1, "--runs", help="Number of times to run the scenario"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed trace"),
+    oauth_token_file: Optional[Path] = typer.Option(
+        None, "--oauth-token-file", help="Path to file containing Claude Code OAuth token"
+    ),
 ):
     """Run a test scenario against a CLI tool."""
 
@@ -71,11 +74,12 @@ def test(
         try:
             if runs == 1:
                 # Single run - use enhanced analysis
-                result = await run_test(tool, scenario, work_dir)
+                result = await run_test(tool, scenario, work_dir, oauth_token_file)
                 analysis = await enhanced_analyze_trace(
                     result["trace"],
                     result.get("scenario_text", ""),
-                    result["tool"]
+                    result["tool"],
+                    oauth_token_file
                 )
                 print_report(result, analysis)
 
@@ -89,11 +93,12 @@ def test(
                 for run_num in range(1, runs + 1):
                     typer.echo(f"Running {tool}/{scenario} - Run {run_num}/{runs}")
 
-                    result = await run_test(tool, scenario, work_dir)
+                    result = await run_test(tool, scenario, work_dir, oauth_token_file)
                     analysis = await enhanced_analyze_trace(
                         result["trace"],
                         result.get("scenario_text", ""),
-                        result["tool"]
+                        result["tool"],
+                        oauth_token_file
                     )
 
                     results.append(result)
@@ -122,6 +127,9 @@ def test(
 def benchmark(
     tool: Optional[str] = typer.Argument(None, help="Tool to benchmark"),
     all: bool = typer.Option(False, "--all", help="Run all benchmarks"),
+    oauth_token_file: Optional[Path] = typer.Option(
+        None, "--oauth-token-file", help="Path to file containing Claude Code OAuth token"
+    ),
 ):
     """Run benchmark tests for CLI tools."""
 
@@ -148,11 +156,12 @@ def benchmark(
             for scenario_file in tool_dir.glob("*.txt"):
                 scenario_name = scenario_file.stem
                 try:
-                    result = await run_test(tool_name, scenario_name)
+                    result = await run_test(tool_name, scenario_name, None, oauth_token_file)
                     analysis = await enhanced_analyze_trace(
                         result["trace"],
                         result.get("scenario_text", ""),
-                        result["tool"]
+                        result["tool"],
+                        oauth_token_file
                     )
                     print_report(result, analysis)
                 except Exception as e:

@@ -1,12 +1,18 @@
 """Claude Code SDK integration for running test scenarios."""
 
+import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from claude_code_sdk import query, ClaudeCodeOptions, ResultMessage
+
+from .config import load_oauth_token
 
 
 async def run_test(
-    tool: str, scenario_name: str, work_dir: Path = None
+    tool: str, 
+    scenario_name: str, 
+    work_dir: Optional[Path] = None,
+    oauth_token_file: Optional[Path] = None
 ) -> Dict[str, Any]:
     """Run a test scenario using Claude Code SDK."""
     # Load scenario prompt
@@ -29,10 +35,62 @@ async def run_test(
         model="sonnet",
     )
 
-    # Execute scenario
+    # Load OAuth token and create isolated environment
+    oauth_token = load_oauth_token(oauth_token_file)
+    
+    # Debug logging
+    print(f"[DEBUG] OAuth token loaded: {'Yes' if oauth_token else 'No'}")
+    if oauth_token:
+        print(f"[DEBUG] OAuth token length: {len(oauth_token)}")
+        print(f"[DEBUG] OAuth token prefix: {oauth_token[:15]}...")
+    
+    # Check existing environment
+    existing_oauth = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    existing_api_key = os.environ.get("ANTHROPIC_API_KEY")
+    print(f"[DEBUG] Existing CLAUDE_CODE_OAUTH_TOKEN: {'Set' if existing_oauth else 'Not set'}")
+    print(f"[DEBUG] Existing ANTHROPIC_API_KEY: {'Set' if existing_api_key else 'Not set'}")
+    
+    # Execute scenario with isolated environment
     trace = []
-    async for message in query(prompt=prompt, options=options):
-        trace.append(message)
+    if oauth_token:
+        # Save original environment
+        original_oauth_env = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+        original_api_key = os.environ.get("ANTHROPIC_API_KEY")
+        
+        # CRITICAL: Remove API key to force OAuth usage
+        if original_api_key:
+            print(f"[DEBUG] Temporarily removing ANTHROPIC_API_KEY to force OAuth usage")
+            del os.environ["ANTHROPIC_API_KEY"]
+        
+        # Set token for this execution
+        os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
+        print(f"[DEBUG] Set CLAUDE_CODE_OAUTH_TOKEN in environment")
+        
+        # Verify it was set
+        print(f"[DEBUG] CLAUDE_CODE_OAUTH_TOKEN after setting: {'Set' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'Not set'}")
+        print(f"[DEBUG] ANTHROPIC_API_KEY after removal: {'Set' if os.environ.get('ANTHROPIC_API_KEY') else 'Not set'}")
+        
+        try:
+            print(f"[DEBUG] Starting SDK query with OAuth token ONLY")
+            async for message in query(prompt=prompt, options=options):
+                trace.append(message)
+        finally:
+            # Restore original environment
+            if original_oauth_env is not None:
+                os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = original_oauth_env
+            else:
+                os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+            
+            if original_api_key:
+                os.environ["ANTHROPIC_API_KEY"] = original_api_key
+                print(f"[DEBUG] Restored ANTHROPIC_API_KEY")
+            
+            print(f"[DEBUG] Restored original environment")
+    else:
+        # No token configured, use normal execution
+        print(f"[DEBUG] No OAuth token configured, using SDK defaults")
+        async for message in query(prompt=prompt, options=options):
+            trace.append(message)
 
     # Extract result
     result = {

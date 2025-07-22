@@ -49,12 +49,43 @@ Examples:
 
 ## Authentication
 
-The Claude Code SDK supports two authentication methods with automatic precedence:
+AgentProbe supports multiple authentication methods to avoid polluting the global environment:
 
-1. **OAuth Token** (Primary): Set `CLAUDE_CODE_OAUTH_TOKEN` environment variable
-2. **API Key** (Fallback): Set `ANTHROPIC_API_KEY` environment variable
+### Method 1: Token File (Recommended)
+Use the `--oauth-token-file` parameter to specify a file containing your OAuth token:
 
-**Precedence**: When both are present, the SDK always tries `CLAUDE_CODE_OAUTH_TOKEN` first, falling back to `ANTHROPIC_API_KEY` only if the OAuth token is invalid or missing.
+```bash
+# Store token in a file
+echo "your-oauth-token-here" > ~/.agentprobe-token
+
+# Use with agentprobe
+uv run agentprobe test vercel --scenario deploy --oauth-token-file ~/.agentprobe-token
+uv run agentprobe benchmark --all --oauth-token-file ~/.agentprobe-token
+```
+
+### Method 2: Config File
+Create a config file in one of these locations (checked in priority order):
+
+1. `~/.agentprobe/config` - Global user config
+2. `.agentprobe` - Project-specific config (add to .gitignore)
+
+```bash
+# Global config
+mkdir -p ~/.agentprobe
+echo "your-oauth-token-here" > ~/.agentprobe/config
+
+# Project-specific config
+echo "your-oauth-token-here" > .agentprobe
+echo ".agentprobe" >> .gitignore
+```
+
+### Method 3: Environment Variables (Legacy)
+If no token file or config file is found, AgentProbe falls back to the SDK's environment variable detection:
+
+1. **OAuth Token** (Primary): `CLAUDE_CODE_OAUTH_TOKEN` environment variable
+2. **API Key** (Fallback): `ANTHROPIC_API_KEY` environment variable
+
+**Note**: Using environment variables may affect other Claude CLI processes in the same environment. Token files and config files provide better isolation.
 
 ## Key Dependencies
 
