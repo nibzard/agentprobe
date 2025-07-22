@@ -164,7 +164,8 @@ def run_claude_analysis_subprocess(
     trace_summary: List[str], 
     scenario_text: str, 
     tool_name: str,
-    claimed_success: bool = None
+    claimed_success: bool = None,
+    oauth_token_file: Optional[Path] = None
 ) -> Dict[str, Any]:
     """Run Claude analysis in a separate process to completely avoid async context issues."""
     
@@ -331,22 +332,11 @@ if __name__ == "__main__":
         oauth_token = load_oauth_token(oauth_token_file)
         env = os.environ.copy()
         
-        # Debug logging for subprocess
-        print(f"[DEBUG analyzer] OAuth token loaded: {'Yes' if oauth_token else 'No'}")
         if oauth_token:
-            print(f"[DEBUG analyzer] OAuth token length: {len(oauth_token)}")
-            print(f"[DEBUG analyzer] OAuth token prefix: {oauth_token[:15]}...")
             env["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
-            print(f"[DEBUG analyzer] Set CLAUDE_CODE_OAUTH_TOKEN in subprocess environment")
-            
             # CRITICAL: Remove API key from subprocess to force OAuth usage
             if env.get("ANTHROPIC_API_KEY"):
-                print(f"[DEBUG analyzer] Removing ANTHROPIC_API_KEY from subprocess to force OAuth usage")
                 del env["ANTHROPIC_API_KEY"]
-        
-        # Check what auth methods are available
-        print(f"[DEBUG analyzer] Subprocess env CLAUDE_CODE_OAUTH_TOKEN: {'Set' if env.get('CLAUDE_CODE_OAUTH_TOKEN') else 'Not set'}")
-        print(f"[DEBUG analyzer] Subprocess env ANTHROPIC_API_KEY: {'Set' if env.get('ANTHROPIC_API_KEY') else 'Not set'}")
         
         # Run the analysis script in subprocess
         result = subprocess.run(
@@ -454,7 +444,8 @@ async def claude_analyze_trace(
             trace_summary,
             scenario_text,
             tool_name,
-            claimed_success
+            claimed_success,
+            oauth_token_file
         )
         
         # Return the Claude analysis result

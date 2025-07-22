@@ -38,18 +38,6 @@ async def run_test(
     # Load OAuth token and create isolated environment
     oauth_token = load_oauth_token(oauth_token_file)
     
-    # Debug logging
-    print(f"[DEBUG] OAuth token loaded: {'Yes' if oauth_token else 'No'}")
-    if oauth_token:
-        print(f"[DEBUG] OAuth token length: {len(oauth_token)}")
-        print(f"[DEBUG] OAuth token prefix: {oauth_token[:15]}...")
-    
-    # Check existing environment
-    existing_oauth = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
-    existing_api_key = os.environ.get("ANTHROPIC_API_KEY")
-    print(f"[DEBUG] Existing CLAUDE_CODE_OAUTH_TOKEN: {'Set' if existing_oauth else 'Not set'}")
-    print(f"[DEBUG] Existing ANTHROPIC_API_KEY: {'Set' if existing_api_key else 'Not set'}")
-    
     # Execute scenario with isolated environment
     trace = []
     if oauth_token:
@@ -59,19 +47,12 @@ async def run_test(
         
         # CRITICAL: Remove API key to force OAuth usage
         if original_api_key:
-            print(f"[DEBUG] Temporarily removing ANTHROPIC_API_KEY to force OAuth usage")
             del os.environ["ANTHROPIC_API_KEY"]
         
         # Set token for this execution
         os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
-        print(f"[DEBUG] Set CLAUDE_CODE_OAUTH_TOKEN in environment")
-        
-        # Verify it was set
-        print(f"[DEBUG] CLAUDE_CODE_OAUTH_TOKEN after setting: {'Set' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'Not set'}")
-        print(f"[DEBUG] ANTHROPIC_API_KEY after removal: {'Set' if os.environ.get('ANTHROPIC_API_KEY') else 'Not set'}")
         
         try:
-            print(f"[DEBUG] Starting SDK query with OAuth token ONLY")
             async for message in query(prompt=prompt, options=options):
                 trace.append(message)
         finally:
@@ -83,12 +64,8 @@ async def run_test(
             
             if original_api_key:
                 os.environ["ANTHROPIC_API_KEY"] = original_api_key
-                print(f"[DEBUG] Restored ANTHROPIC_API_KEY")
-            
-            print(f"[DEBUG] Restored original environment")
     else:
         # No token configured, use normal execution
-        print(f"[DEBUG] No OAuth token configured, using SDK defaults")
         async for message in query(prompt=prompt, options=options):
             trace.append(message)
 
