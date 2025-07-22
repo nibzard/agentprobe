@@ -70,16 +70,28 @@ async def enhanced_analyze_trace(
                     "⚠️ Claude detected discrepancy between claimed and actual success"
                 )
             
+            # Add AX-specific insights
+            if claude_analysis.get("ax_score"):
+                enhanced_analysis["ax_score"] = claude_analysis["ax_score"]
+            
+            if claude_analysis.get("ax_summary"):
+                enhanced_analysis["ax_summary"] = claude_analysis["ax_summary"]
+            
             # Use Claude's insights to populate all fields - no hardcoded patterns
-            if claude_analysis.get("failure_reasons"):
+            if claude_analysis.get("cli_friction_points"):
+                enhanced_analysis["observations"].extend(claude_analysis["cli_friction_points"])
+            elif claude_analysis.get("failure_reasons"):
                 enhanced_analysis["observations"].extend(claude_analysis["failure_reasons"])
             
             # Add Claude's recommendations directly
-            if claude_analysis.get("recommendations"):
+            if claude_analysis.get("ax_improvements"):
+                enhanced_analysis["recommendations"].extend(claude_analysis["ax_improvements"])
+            elif claude_analysis.get("recommendations"):
                 enhanced_analysis["recommendations"].extend(claude_analysis["recommendations"])
             
             # Store help usage for reporting without hardcoded messages
             enhanced_analysis["help_used"] = claude_analysis.get("help_used", False)
+            enhanced_analysis["help_useful"] = claude_analysis.get("help_useful", False)
             
             # Store Claude's analysis for detailed reporting
             enhanced_analysis["claude_analysis"] = claude_analysis.get("claude_analysis", "")
@@ -173,7 +185,7 @@ def run_claude_analysis_subprocess(
     trace_text = "\n".join(trace_summary)
     
     analysis_prompt = f"""
-I need you to analyze the execution trace of an AI agent trying to complete a CLI task and determine if it actually succeeded or failed.
+You are analyzing how well an AI agent (Claude) was able to use a CLI tool to complete a task. Your goal is to identify friction points and provide actionable recommendations to improve the CLI's Agent Experience (AX).
 
 **Original Task/Scenario:**
 {scenario_text}
@@ -185,29 +197,37 @@ I need you to analyze the execution trace of an AI agent trying to complete a CL
 **Full Execution Trace:**
 {trace_text}
 
-Please analyze this trace and provide:
+Please analyze this trace from an AX perspective and provide:
 
 1. **Actual Success**: Did the agent actually complete the task successfully? (true/false)
-2. **Discrepancy**: Is there a difference between what the agent claimed and what actually happened?
-3. **Failure Reasons**: If it failed, what were the specific reasons?
-4. **Help Usage**: Did the agent appropriately use help flags or documentation?
-5. **Recommendations**: What could be improved for better CLI usability?
+2. **Claimed Success**: What did the agent claim as the result? (true/false)
+3. **Discrepancy**: Is there a difference between claimed and actual success?
+4. **Turn Count**: How many assistant messages (turns) did it take?
+5. **CLI Friction Points**: What specific CLI behaviors caused confusion or extra turns?
+   - Focus on: unclear error messages, missing feedback, ambiguous outputs, permission issues
+6. **Help Usage**: Did the agent use --help or documentation? Was it helpful?
+7. **AX Improvements**: Specific, actionable changes the CLI could make to reduce friction
+   - Be concrete: "Add --status flag", not "improve feedback"
+   - Focus on what would reduce turn count and confusion
 
-Focus on:
-- Permission denials and authentication issues
-- Actual file/resource creation vs. claims
-- CLI syntax errors and unknown options
-- Whether the final state matches the intended goal
-- Any false positive success claims
+Think about:
+- Where did the agent get stuck or retry operations?
+- What CLI outputs were ambiguous or misleading?
+- What missing features forced workarounds?
+- How could error messages be more actionable?
 
-Respond with ONLY a JSON object in a ```json code block with this exact structure:
+Respond with ONLY a JSON object in a ```json code block:
 {{
     "actual_success": boolean,
+    "claimed_success": boolean,
     "discrepancy": boolean,
-    "failure_reasons": ["reason1", "reason2"],
+    "turn_count": number,
+    "cli_friction_points": ["specific issue 1", "specific issue 2"],
     "help_used": boolean,
-    "recommendations": ["rec1", "rec2"],
-    "claude_analysis": "detailed explanation of your analysis"
+    "help_useful": boolean,
+    "ax_improvements": ["actionable improvement 1", "actionable improvement 2"],
+    "ax_score": "A/B/C/D/F",
+    "ax_summary": "1-2 sentence summary of the agent's experience"
 }}
 """
 
@@ -277,6 +297,11 @@ async def main():
                             result = json.loads(json_str)
                             # Store full Claude response separately to avoid JSON serialization issues
                             result["claude_analysis"] = content[:1000] + "..." if len(content) > 1000 else content
+                            # Map new fields to old field names for compatibility
+                            if "cli_friction_points" in result and "failure_reasons" not in result:
+                                result["failure_reasons"] = result["cli_friction_points"]
+                            if "ax_improvements" in result and "recommendations" not in result:
+                                result["recommendations"] = result["ax_improvements"]
                             print(json.dumps(result))
                             return
                         except json.JSONDecodeError as e:
@@ -290,6 +315,11 @@ async def main():
                     try:
                         result = json.loads(json_str)
                         result["claude_analysis"] = content[:1000] + "..." if len(content) > 1000 else content
+                        # Map new fields to old field names for compatibility
+                        if "cli_friction_points" in result and "failure_reasons" not in result:
+                            result["failure_reasons"] = result["cli_friction_points"]
+                        if "ax_improvements" in result and "recommendations" not in result:
+                            result["recommendations"] = result["ax_improvements"]
                         print(json.dumps(result))
                         return
                     except json.JSONDecodeError as e:
