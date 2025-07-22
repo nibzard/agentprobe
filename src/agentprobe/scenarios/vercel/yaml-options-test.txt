@@ -1,0 +1,12 @@
+---
+version: 2
+created: 2025-01-22
+tool: vercel
+permission_mode: default
+allowed_tools: [Read, Bash]
+model: opus
+max_turns: 3
+expected_turns: 1-2
+description: "Test YAML options parsing"
+---
+Just check the Vercel CLI version without making any changes.

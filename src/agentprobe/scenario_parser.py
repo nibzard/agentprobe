@@ -61,4 +61,7 @@ def get_scenario_options(metadata: Dict[str, Any]) -> Dict[str, Any]:
     if 'permission_mode' in metadata:
         options['permission_mode'] = metadata['permission_mode']
     
+    if 'max_turns' in metadata:
+        options['max_turns'] = metadata['max_turns']
+    
     return options
