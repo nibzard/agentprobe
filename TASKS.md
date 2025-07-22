@@ -68,7 +68,7 @@
   - [ ] Detect command correction attempts
 
 ### 🟠 P1: Error Pattern Detection
-- [x] [P1] Implement smart error categorization [Status: Done] [Done: 2025-01-20]
+- [x] [P1] Implement smart error categorization [Status: Done] [Done: 2025-01-22]
   - [x] Parse error messages from traces (via Claude analysis in analyzer.py:410-466)
   - [x] Categorize errors by type (auth, missing deps, syntax, etc) (Claude-based categorization)
   - [x] Map errors to recommendations (Claude provides specific recommendations)
@@ -149,7 +149,7 @@
 
 ---
 
-## Current Implementation Status (Updated 2025-01-20)
+## Current Implementation Status (Updated 2025-01-22)
 
 ### ✅ What's Currently Working
 - Core CLI framework (test, benchmark commands) - cli.py
@@ -158,6 +158,8 @@
 - Rich terminal reporting with success/failure detection - reporter.py
 - Multi-run aggregation and statistics
 - Comprehensive scenario library (vercel, gh, docker, git, wrangler)
+- YAML frontmatter support for scenarios with metadata - scenario_parser.py
+- Error pattern detection with Claude-based categorization - analyzer.py
 
 ### ❌ Major Missing Features
 - **No persistence layer**: Results are not stored, only displayed
@@ -173,6 +175,8 @@
 
 ### Week 1 (Current)
 - [x] Set up development environment [Done: 2025-01-20]
+- [x] Enhanced error pattern detection [Done: 2025-01-22]
+- [x] YAML frontmatter support for scenarios [Done: 2025-01-22]
 - [ ] Create storage.py foundation
 - [ ] Implement basic SQLite storage
 - [ ] Update runner to save results
@@ -213,6 +217,32 @@
 - Start with simple pattern matching
 - Add ML-based analysis later
 - Keep analysis pluggable
+
+---
+
+## Archive - Completed Tasks
+
+### 🟢 Phase 2: Enhanced Analysis Engine - Completed Items
+- [x] [P1] Enhanced Error Pattern Detection [Done: 2025-01-22]
+  - [x] Implemented subprocess-based Claude Code SDK analysis in analyzer.py
+  - [x] Added intelligent error categorization (auth, missing deps, syntax, etc)
+  - [x] Provides specific recommendations for each error type
+  - [x] Includes fallback pattern detection for basic cases
+  - [x] Successfully detects permission issues, CLI syntax errors, and other patterns
+
+### 🟢 Enhanced Scenario System - Completed Items  
+- [x] [P2] YAML Frontmatter Support [Done: 2025-01-22]
+  - [x] Implemented scenario_parser.py with full YAML frontmatter parsing
+  - [x] Support for model, max_turns, allowed_tools, permission_mode options
+  - [x] Backward compatible with plain text scenarios
+  - [x] Working example in yaml-options-test.txt
+  - [x] Integrated with runner.py for scenario option overrides
+
+### 🟢 Foundation - Completed Items
+- [x] [P0] Development environment setup [Done: 2025-01-20]
+- [x] [P0] Core CLI framework implementation [Done: 2025-01-20]
+- [x] [P0] Claude Code SDK integration [Done: 2025-01-20]
+- [x] [P0] Basic trace analysis and reporting [Done: 2025-01-20]
 
 ---
 
