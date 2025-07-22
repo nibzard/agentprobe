@@ -109,3 +109,7 @@ The codebase intentionally contains no tool-specific logic. All CLI tools (verce
 - Results include trace data, success/failure, duration, and cost metrics
 - Analysis is pattern-based and should work across all CLI tools
 - Community benchmark table in README.md should be updated when adding new tools/scenarios
+
+## Development Workflow
+
+- Use conventional commits and after every major change to the source code you should commit it and push it to GitHub.

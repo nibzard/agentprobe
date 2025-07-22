@@ -9,8 +9,8 @@ from .config import load_oauth_token
 
 
 async def run_test(
-    tool: str, 
-    scenario_name: str, 
+    tool: str,
+    scenario_name: str,
     work_dir: Optional[Path] = None,
     oauth_token_file: Optional[Path] = None
 ) -> Dict[str, Any]:
@@ -33,25 +33,27 @@ async def run_test(
         max_turns=50,
         cwd=str(work_dir) if work_dir else None,
         model="sonnet",
+        allowed_tools=["Read", "Write", "Bash"],
+        permission_mode="acceptEdits"
     )
 
     # Load OAuth token and create isolated environment
     oauth_token = load_oauth_token(oauth_token_file)
-    
+
     # Execute scenario with isolated environment
     trace = []
     if oauth_token:
         # Save original environment
         original_oauth_env = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
         original_api_key = os.environ.get("ANTHROPIC_API_KEY")
-        
+
         # CRITICAL: Remove API key to force OAuth usage
         if original_api_key:
             del os.environ["ANTHROPIC_API_KEY"]
-        
+
         # Set token for this execution
         os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
-        
+
         try:
             async for message in query(prompt=prompt, options=options):
                 trace.append(message)
@@ -61,7 +63,7 @@ async def run_test(
                 os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = original_oauth_env
             else:
                 os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
-            
+
             if original_api_key:
                 os.environ["ANTHROPIC_API_KEY"] = original_api_key
     else:
