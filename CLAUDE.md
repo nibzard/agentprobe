@@ -47,6 +47,15 @@ Examples:
 - `scenarios/vercel/deploy.txt` - "Deploy this Next.js application to production..."
 - `scenarios/gh/create-pr.txt` - "Create a pull request for the current branch..."
 
+## Authentication
+
+The Claude Code SDK supports two authentication methods with automatic precedence:
+
+1. **OAuth Token** (Primary): Set `CLAUDE_CODE_OAUTH_TOKEN` environment variable
+2. **API Key** (Fallback): Set `ANTHROPIC_API_KEY` environment variable
+
+**Precedence**: When both are present, the SDK always tries `CLAUDE_CODE_OAUTH_TOKEN` first, falling back to `ANTHROPIC_API_KEY` only if the OAuth token is invalid or missing.
+
 ## Key Dependencies
 
 - `claude-code-sdk` - Core integration for running Claude Code programmatically
