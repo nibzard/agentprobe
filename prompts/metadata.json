@@ -1,0 +1,19 @@
+{
+  "analysis.jinja2": {
+    "version": "1.0.0",
+    "description": "Analyzes AI agent CLI interactions to identify friction points and AX improvements",
+    "created": "2025-07-22",
+    "last_modified": "2025-07-22",
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "date": "2025-07-22",
+        "changes": [
+          "Initial externalized prompt template",
+          "Added Jinja2 templating support",
+          "Moved from embedded string to template file"
+        ]
+      }
+    ]
+  }
+}

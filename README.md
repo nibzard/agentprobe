@@ -274,6 +274,21 @@ AgentProbe uses Claude itself to analyze agent interactions, providing:
 
 This approach avoids hardcoded patterns and provides nuanced, tool-specific insights that help CLI developers understand exactly where their tools create friction for AI agents.
 
+### Prompt Management & Versioning
+
+AgentProbe uses externalized Jinja2 templates for analysis prompts:
+
+- **Template-based Prompts**: Analysis prompts are stored in `prompts/analysis.jinja2` for easy editing and iteration
+- **Version Tracking**: Each analysis includes prompt version metadata for reproducible results
+- **Dynamic Variables**: Templates support contextual variables (scenario, tool, trace data)
+- **Historical Comparison**: Version tracking enables comparing results across prompt iterations
+
+```bash
+# Prompt templates are automatically loaded from prompts/ directory
+# Version information is tracked in prompts/metadata.json
+# Analysis results include prompt_version field for tracking
+```
+
 ## Requirements
 
 - Python 3.10+

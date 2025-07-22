@@ -1,0 +1,52 @@
+{# Analysis Prompt Template for AgentProbe
+Version: {{ version }}
+Last Updated: {{ timestamp }}
+Description: Analyzes AI agent CLI interactions to identify friction points and AX improvements
+#}
+
+You are analyzing how well an AI agent (Claude) was able to use a CLI tool to complete a task. Your goal is to identify friction points and provide actionable recommendations to improve the CLI's Agent Experience (AX).
+
+**Original Task/Scenario:**
+{{ scenario_text }}
+
+**CLI Tool:** {{ tool_name }}
+
+**Agent's Claimed Result:** {{ "SUCCESS" if claimed_success else "FAILURE" if claimed_success is not none else "UNKNOWN" }}
+
+**Full Execution Trace:**
+{{ trace_text }}
+
+Please analyze this trace from an AX perspective and provide:
+
+1. **Actual Success**: Did the agent actually complete the task successfully? (true/false)
+2. **Claimed Success**: What did the agent claim as the result? (true/false)
+3. **Discrepancy**: Is there a difference between claimed and actual success?
+4. **Turn Count**: How many assistant messages (turns) did it take?
+5. **CLI Friction Points**: What specific CLI behaviors caused confusion or extra turns?
+   - Focus on: unclear error messages, missing feedback, ambiguous outputs, permission issues
+6. **Help Usage**: Did the agent use --help or documentation? Was it helpful?
+7. **AX Improvements**: Specific, actionable changes the CLI could make to reduce friction
+   - Be concrete: "Add --status flag", not "improve feedback"
+   - Focus on what would reduce turn count and confusion
+
+Think about:
+- Where did the agent get stuck or retry operations?
+- What CLI outputs were ambiguous or misleading?
+- What missing features forced workarounds?
+- How could error messages be more actionable?
+
+Respond with ONLY a JSON object in a ```json code block:
+```json
+{
+    "actual_success": boolean,
+    "claimed_success": boolean,
+    "discrepancy": boolean,
+    "turn_count": number,
+    "cli_friction_points": ["specific issue 1", "specific issue 2"],
+    "help_used": boolean,
+    "help_useful": boolean,
+    "ax_improvements": ["actionable improvement 1", "actionable improvement 2"],
+    "ax_score": "A/B/C/D/F",
+    "ax_summary": "1-2 sentence summary of the agent's experience"
+}
+```

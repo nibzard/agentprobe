@@ -6,8 +6,8 @@ from claude_code_sdk import ResultMessage
 import json
 import tempfile
 import os
-import subprocess
-import sys
+from datetime import datetime
+from jinja2 import Environment, FileSystemLoader
 
 from .config import load_oauth_token
 
@@ -172,6 +172,62 @@ def aggregate_analyses(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
     return aggregate
 
 
+def load_analysis_prompt(
+    scenario_text: str,
+    tool_name: str, 
+    trace_text: str,
+    claimed_success: bool = None
+) -> tuple[str, str]:
+    """Load and render the analysis prompt template with versioning.
+    
+    Returns:
+        tuple: (rendered_prompt, prompt_version)
+    """
+    # Get the project root directory
+    current_file = Path(__file__)
+    project_root = current_file.parent.parent.parent  # src/agentprobe/analyzer.py -> project_root
+    prompts_dir = project_root / "prompts"
+    
+    # Load version information from metadata
+    metadata_file = prompts_dir / "metadata.json"
+    prompt_version = "1.0.0"  # fallback version
+    
+    if metadata_file.exists():
+        try:
+            with open(metadata_file, 'r') as f:
+                metadata = json.load(f)
+                prompt_version = metadata.get("analysis.jinja2", {}).get("version", "1.0.0")
+        except (json.JSONDecodeError, IOError):
+            # Use fallback version if metadata can't be read
+            pass
+    
+    # Set up Jinja2 environment
+    env = Environment(
+        loader=FileSystemLoader(prompts_dir),
+        trim_blocks=True,
+        lstrip_blocks=True
+    )
+    
+    # Load the template
+    template = env.get_template("analysis.jinja2")
+    
+    # Prepare template variables
+    template_vars = {
+        "version": prompt_version,
+        "timestamp": datetime.now().isoformat(),
+        "scenario_text": scenario_text,
+        "tool_name": tool_name,
+        "trace_text": trace_text,
+        "claimed_success": claimed_success,
+        "none": None  # For Jinja2 comparison
+    }
+    
+    # Render the prompt
+    rendered_prompt = template.render(**template_vars)
+    
+    return rendered_prompt, prompt_version
+
+
 def run_claude_analysis_subprocess(
     trace_summary: List[str], 
     scenario_text: str, 
@@ -181,55 +237,11 @@ def run_claude_analysis_subprocess(
 ) -> Dict[str, Any]:
     """Run Claude analysis in a separate process to completely avoid async context issues."""
     
-    # Create analysis prompt
+    # Create analysis prompt using template
     trace_text = "\n".join(trace_summary)
-    
-    analysis_prompt = f"""
-You are analyzing how well an AI agent (Claude) was able to use a CLI tool to complete a task. Your goal is to identify friction points and provide actionable recommendations to improve the CLI's Agent Experience (AX).
-
-**Original Task/Scenario:**
-{scenario_text}
-
-**CLI Tool:** {tool_name}
-
-**Agent's Claimed Result:** {"SUCCESS" if claimed_success else "FAILURE" if claimed_success is not None else "UNKNOWN"}
-
-**Full Execution Trace:**
-{trace_text}
-
-Please analyze this trace from an AX perspective and provide:
-
-1. **Actual Success**: Did the agent actually complete the task successfully? (true/false)
-2. **Claimed Success**: What did the agent claim as the result? (true/false)
-3. **Discrepancy**: Is there a difference between claimed and actual success?
-4. **Turn Count**: How many assistant messages (turns) did it take?
-5. **CLI Friction Points**: What specific CLI behaviors caused confusion or extra turns?
-   - Focus on: unclear error messages, missing feedback, ambiguous outputs, permission issues
-6. **Help Usage**: Did the agent use --help or documentation? Was it helpful?
-7. **AX Improvements**: Specific, actionable changes the CLI could make to reduce friction
-   - Be concrete: "Add --status flag", not "improve feedback"
-   - Focus on what would reduce turn count and confusion
-
-Think about:
-- Where did the agent get stuck or retry operations?
-- What CLI outputs were ambiguous or misleading?
-- What missing features forced workarounds?
-- How could error messages be more actionable?
-
-Respond with ONLY a JSON object in a ```json code block:
-{{
-    "actual_success": boolean,
-    "claimed_success": boolean,
-    "discrepancy": boolean,
-    "turn_count": number,
-    "cli_friction_points": ["specific issue 1", "specific issue 2"],
-    "help_used": boolean,
-    "help_useful": boolean,
-    "ax_improvements": ["actionable improvement 1", "actionable improvement 2"],
-    "ax_score": "A/B/C/D/F",
-    "ax_summary": "1-2 sentence summary of the agent's experience"
-}}
-"""
+    analysis_prompt, prompt_version = load_analysis_prompt(
+        scenario_text, tool_name, trace_text, claimed_success
+    )
 
     # Write prompt to temporary file for subprocess
     try:
@@ -477,6 +489,11 @@ async def claude_analyze_trace(
             claimed_success,
             oauth_token_file
         )
+        
+        # Add prompt version to the result for tracking
+        if claude_result and not claude_result.get("subprocess_error"):
+            _, prompt_version = load_analysis_prompt("", "", "", None)
+            claude_result["prompt_version"] = prompt_version
         
         # Return the Claude analysis result
         return claude_result
