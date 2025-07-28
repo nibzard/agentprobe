@@ -1,6 +1,15 @@
 # AgentProbe
 
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Stars](https://img.shields.io/github/stars/nibzard/agentprobe.svg)](https://github.com/nibzard/agentprobe)
+[![GitHub Issues](https://img.shields.io/github/issues/nibzard/agentprobe.svg)](https://github.com/nibzard/agentprobe/issues)
+
 Test how well AI agents interact with your CLI tools. AgentProbe runs Claude Code against any command-line tool and provides actionable insights to improve Agent Experience (AX) - helping CLI developers make their tools more AI-friendly.
+
+<p align="center">
+  <img src="assets/agentprobe.jpeg" alt="AgentProbe" width="400">
+</p>
 
 ## Quick Start
 
@@ -235,7 +244,7 @@ is successful with proper domain configuration.
 
 **YAML Frontmatter Options:**
 - `model`: Override default model (`sonnet`, `opus`)
-- `max_turns`: Limit agent interactions 
+- `max_turns`: Limit agent interactions
 - `permission_mode`: Set permissions (`acceptEdits`, `default`, `plan`, `bypassPermissions`)
 - `allowed_tools`: Specify tools (`[Read, Write, Bash]`)
 - `expected_turns`: Range for AX scoring comparison
@@ -320,7 +329,7 @@ Current test scenarios included:
   - `create-pr.txt` - Create pull requests
 - **Vercel** (`vercel/`)
   - `deploy.txt` - Deploy applications to production
-  - `preview-deploy.txt` - Deploy to preview environment  
+  - `preview-deploy.txt` - Deploy to preview environment
   - `init-project.txt` - Initialize new project with template
   - `env-setup.txt` - Configure environment variables
   - `list-deployments.txt` - List recent deployments
