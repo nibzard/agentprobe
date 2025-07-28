@@ -8,7 +8,7 @@
 Test how well AI agents interact with your CLI tools. AgentProbe runs Claude Code against any command-line tool and provides actionable insights to improve Agent Experience (AX) - helping CLI developers make their tools more AI-friendly.
 
 <p align="center">
-  <img src="assets/agentprobe.jpeg" alt="AgentProbe" width="400">
+  <img src="assets/agentprobe.jpeg" alt="AgentProbe" width="100%">
 </p>
 
 ## Quick Start
