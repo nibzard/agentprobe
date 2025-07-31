@@ -1,0 +1,8 @@
+Your task is to manage environment variables for this Netlify project with different values for different contexts.
+1. Set an environment variable named `API_ENDPOINT`.
+2. For the 'production' deploy context, its value should be `https://api.prodsite.com`.
+3. For the 'dev' (local development) deploy context, its value should be `http://localhost:9000`.
+4. After setting the variables, you must verify your work.
+5. First, retrieve the value for `API_ENDPOINT` specifically from the 'production' context and confirm it is correct.
+6. Second, retrieve the value for `API_ENDPOINT` from the 'dev' context and confirm it is correct.
+7. Report success only if both variables were set and verified correctly for their respective contexts.

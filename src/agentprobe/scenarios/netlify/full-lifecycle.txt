@@ -1,0 +1,8 @@
+You are starting with a local directory that is not yet a Netlify project. Your task is to perform the following sequence of actions using the Netlify CLI:
+1. Create a new, empty site on Netlify. Name it 'agentprobe-test-site-[random-string]'.
+2. From the command output, get the Site ID of the newly created site.
+3. Link the current local directory to that new remote site.
+4. Set a production environment variable named `TEST_API_KEY` with the value `123-ABC-789`.
+5. Deploy the current directory to production.
+6. Verify the deployment was successful by checking the site's status or logs.
+7. As a final cleanup step, delete the site you created using its Site ID.

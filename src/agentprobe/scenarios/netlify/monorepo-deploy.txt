@@ -1,0 +1,4 @@
+This project is a monorepo containing multiple packages. Your task is to use the Netlify CLI to deploy ONLY the `webapp` package to production.
+1. Run the deployment command from the root of the monorepo.
+2. Ensure you use the correct flag to filter for the `webapp` directory.
+3. Verify that the deployment is successful.

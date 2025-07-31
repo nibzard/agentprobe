@@ -110,6 +110,76 @@ The codebase intentionally contains no tool-specific logic. All CLI tools (verce
 - Analysis is pattern-based and should work across all CLI tools
 - Community benchmark table in README.md should be updated when adding new tools/scenarios
 
+## Publishing to PyPI
+
+AgentProbe can be published to PyPI to enable users to run `uvx agentprobe` directly without cloning the repository.
+
+### Publishing Process
+
+Always test on TestPyPI first, then publish to PyPI if everything works correctly.
+
+### Token Management with pass
+
+This project uses the `pass` CLI tool for secure token management. Store your PyPI tokens securely:
+
+```bash
+# Store TestPyPI token
+pass insert pypi/testpypi-token
+
+# Store production PyPI token  
+pass insert pypi/production-token
+
+# Verify tokens are stored (will show encrypted tokens)
+pass pypi/testpypi-token
+pass pypi/production-token
+```
+
+**Note**: Both tokens are now configured and ready to use.
+
+#### Step 1: Test on TestPyPI
+
+```bash
+# Build the package
+uv build
+
+# Publish to TestPyPI using pass
+uv publish --publish-url https://test.pypi.org/legacy/ --token $(pass pypi/testpypi-token)
+
+# Test the published package
+uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agentprobe --help
+```
+
+#### Step 2: Publish to PyPI (Production)
+
+Only proceed if TestPyPI installation and testing is successful:
+
+```bash
+# Publish to production PyPI using pass
+uv publish --token $(pass pypi/production-token)
+```
+
+#### Step 3: Verify Production Installation
+
+```bash
+# Test production installation
+uvx agentprobe --help
+uvx agentprobe benchmark --all
+```
+
+### Version Management
+
+Before publishing:
+1. Update version in `pyproject.toml`
+2. Commit and tag the release
+3. Push to GitHub
+4. Then publish to PyPI
+
+### TestPyPI vs PyPI
+
+- **TestPyPI**: Use for testing package installation and functionality
+- **PyPI**: Production repository for end users
+- Always test on TestPyPI first to catch packaging issues
+
 ## Development Workflow
 
 - Use conventional commits and after every major change to the source code you should commit it and push it to GitHub.

@@ -1,0 +1,6 @@
+Your goal is to first create a preview of a new deployment and then push it to production.
+1. Deploy the current project to a draft URL using the custom alias 'staging-release-candidate'.
+2. After the draft deployment is complete, your next task is to promote this exact build to production.
+3. The final result should be the main site URL updated with the content from the draft deploy.
+
+Note: The Netlify CLI may not have a direct 'promote' command. You need to figure out the correct command to achieve the goal of making the draft content live on the production URL.

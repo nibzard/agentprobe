@@ -1,0 +1,6 @@
+Your task is to add a serverless function to this project and deploy it.
+1. Create a new serverless function using the 'hello-world' template. Name the function 'api-greeting'.
+2. Once the function is created, run the local development server using `netlify dev`.
+3. While the server is running in the background, invoke the 'api-greeting' function with a 'name=World' query parameter to test it.
+4. Verify from the invocation output that the function returned a "Hello, World" message.
+5. Finally, stop the dev server and deploy the entire project to production, ensuring the new function is included.

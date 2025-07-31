@@ -8,6 +8,11 @@ import tempfile
 import os
 from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
+try:
+    from importlib.resources import files
+except ImportError:
+    # Fallback for Python < 3.9
+    from importlib_resources import files
 
 from .config import load_oauth_token
 
@@ -183,49 +188,58 @@ def load_analysis_prompt(
     Returns:
         tuple: (rendered_prompt, prompt_version)
     """
-    # Get the project root directory
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent.parent  # src/agentprobe/analyzer.py -> project_root
-    prompts_dir = project_root / "prompts"
+    # Use importlib.resources to access package data
+    prompts_package = files("agentprobe") / "prompts"
     
     # Load version information from metadata
-    metadata_file = prompts_dir / "metadata.json"
     prompt_version = "1.0.0"  # fallback version
     
-    if metadata_file.exists():
+    try:
+        metadata_text = (prompts_package / "metadata.json").read_text()
+        metadata = json.loads(metadata_text)
+        prompt_version = metadata.get("analysis.jinja2", {}).get("version", "1.0.0")
+    except (json.JSONDecodeError, IOError, FileNotFoundError):
+        # Use fallback version if metadata can't be read
+        pass
+    
+    # Create a temporary directory to extract templates for FileSystemLoader
+    import tempfile
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_prompts_dir = Path(temp_dir) / "prompts"
+        temp_prompts_dir.mkdir()
+        
+        # Extract template files to temp directory
         try:
-            with open(metadata_file, 'r') as f:
-                metadata = json.load(f)
-                prompt_version = metadata.get("analysis.jinja2", {}).get("version", "1.0.0")
-        except (json.JSONDecodeError, IOError):
-            # Use fallback version if metadata can't be read
-            pass
-    
-    # Set up Jinja2 environment
-    env = Environment(
-        loader=FileSystemLoader(prompts_dir),
-        trim_blocks=True,
-        lstrip_blocks=True
-    )
-    
-    # Load the template
-    template = env.get_template("analysis.jinja2")
-    
-    # Prepare template variables
-    template_vars = {
-        "version": prompt_version,
-        "timestamp": datetime.now().isoformat(),
-        "scenario_text": scenario_text,
-        "tool_name": tool_name,
-        "trace_text": trace_text,
-        "claimed_success": claimed_success,
-        "none": None  # For Jinja2 comparison
-    }
-    
-    # Render the prompt
-    rendered_prompt = template.render(**template_vars)
-    
-    return rendered_prompt, prompt_version
+            template_content = (prompts_package / "analysis.jinja2").read_text()
+            (temp_prompts_dir / "analysis.jinja2").write_text(template_content)
+        except FileNotFoundError:
+            raise FileNotFoundError("analysis.jinja2 template not found in package")
+        
+        # Set up Jinja2 environment
+        env = Environment(
+            loader=FileSystemLoader(temp_prompts_dir),
+            trim_blocks=True,
+            lstrip_blocks=True
+        )
+        
+        # Load the template
+        template = env.get_template("analysis.jinja2")
+        
+        # Prepare template variables
+        template_vars = {
+            "version": prompt_version,
+            "timestamp": datetime.now().isoformat(),
+            "scenario_text": scenario_text,
+            "tool_name": tool_name,
+            "trace_text": trace_text,
+            "claimed_success": claimed_success,
+            "none": None  # For Jinja2 comparison
+        }
+        
+        # Render the prompt
+        rendered_prompt = template.render(**template_vars)
+        
+        return rendered_prompt, prompt_version
 
 
 def run_claude_analysis_subprocess(
