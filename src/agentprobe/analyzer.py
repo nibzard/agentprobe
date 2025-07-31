@@ -251,11 +251,33 @@ def run_claude_analysis_subprocess(
 ) -> Dict[str, Any]:
     """Run Claude analysis in a separate process to completely avoid async context issues."""
     
-    # Create analysis prompt using template
+    # Create analysis prompt using template - do this in parent process
     trace_text = "\n".join(trace_summary)
-    analysis_prompt, prompt_version = load_analysis_prompt(
-        scenario_text, tool_name, trace_text, claimed_success
-    )
+    try:
+        analysis_prompt, prompt_version = load_analysis_prompt(
+            scenario_text, tool_name, trace_text, claimed_success
+        )
+    except Exception as e:
+        # If template loading fails, create a basic prompt manually
+        analysis_prompt = f"""Please analyze this CLI execution trace and provide insights in JSON format.
+
+Scenario: {scenario_text}
+Tool: {tool_name}
+Claimed Success: {claimed_success}
+
+Trace:
+{trace_text}
+
+Please provide your analysis as a JSON object with these fields:
+- actual_success: boolean indicating if the task actually succeeded
+- discrepancy: boolean indicating if there's a mismatch between claimed and actual success
+- cli_friction_points: list of specific CLI usability issues encountered
+- ax_improvements: list of recommendations to improve CLI usability for AI agents
+- help_used: boolean indicating if help commands were used
+- help_useful: boolean indicating if help was useful
+
+Respond with only the JSON object."""
+        prompt_version = "fallback"
 
     # Write prompt to temporary file for subprocess
     try:
