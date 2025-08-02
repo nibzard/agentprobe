@@ -8,6 +8,8 @@ from typing import Optional
 from .runner import run_test
 from .analyzer import aggregate_analyses, enhanced_analyze_trace
 from .reporter import print_report, print_aggregate_report
+from .submission import ResultSubmitter
+from .models import TestResult
 
 app = typer.Typer(
     name="agentprobe",
@@ -67,6 +69,7 @@ def test(
     oauth_token_file: Optional[Path] = typer.Option(
         None, "--oauth-token-file", help="Path to file containing Claude Code OAuth token"
     ),
+    share: bool = typer.Option(False, "--share", help="Share results with the community"),
 ):
     """Run a test scenario against a CLI tool."""
 
@@ -85,6 +88,19 @@ def test(
 
                 if verbose:
                     print_trace_details(result["trace"])
+                
+                # Share result if requested
+                if share:
+                    submitter = ResultSubmitter()
+                    test_result = TestResult(
+                        run_id=result.get("run_id", ""),
+                        tool=result["tool"],
+                        scenario=result["scenario"],
+                        trace=result["trace"],
+                        duration=result["duration"],
+                        analysis=analysis
+                    )
+                    await submitter.submit_result(test_result, force=True)
             else:
                 # Multiple runs - collect all results
                 results = []
@@ -130,6 +146,7 @@ def benchmark(
     oauth_token_file: Optional[Path] = typer.Option(
         None, "--oauth-token-file", help="Path to file containing Claude Code OAuth token"
     ),
+    share: bool = typer.Option(False, "--share", help="Share results with the community"),
 ):
     """Run benchmark tests for CLI tools."""
 
@@ -164,6 +181,19 @@ def benchmark(
                         oauth_token_file
                     )
                     print_report(result, analysis)
+                    
+                    # Share result if requested
+                    if share:
+                        submitter = ResultSubmitter()
+                        test_result = TestResult(
+                            run_id=result.get("run_id", ""),
+                            tool=result["tool"],
+                            scenario=result["scenario"],
+                            trace=result["trace"],
+                            duration=result["duration"],
+                            analysis=analysis
+                        )
+                        await submitter.submit_result(test_result, force=True)
                 except Exception as e:
                     typer.echo(f"Failed {tool_name}/{scenario_name}: {e}", err=True)
 
@@ -183,6 +213,94 @@ def report(
     typer.echo(
         f"Future: Will support {format} format" + (f" to {output}" if output else "")
     )
+
+
+# Create community command group
+community_app = typer.Typer(help="View and manage community results")
+app.add_typer(community_app, name="community")
+
+
+@community_app.command("stats")
+def community_stats(
+    tool: Optional[str] = typer.Argument(None, help="Tool to show stats for"),
+):
+    """View community statistics for tools."""
+    typer.echo("Community statistics feature coming soon!")
+    typer.echo(f"Will show aggregated results for: {tool or 'all tools'}")
+    typer.echo("This will include:")
+    typer.echo("  - Success rates across users")
+    typer.echo("  - Common friction points")
+    typer.echo("  - Tool version compatibility")
+
+
+@community_app.command("show")
+def community_show(
+    tool: str = typer.Argument(..., help="Tool name"),
+    scenario: str = typer.Argument(..., help="Scenario name"),
+    last: int = typer.Option(10, "--last", help="Number of recent results to show"),
+):
+    """View recent community results for a specific scenario."""
+    typer.echo(f"Community results for {tool}/{scenario} (last {last} runs):")
+    typer.echo("This feature will show:")
+    typer.echo("  - Recent execution results")
+    typer.echo("  - Success/failure patterns")
+    typer.echo("  - Common issues encountered")
+
+
+# Create config command group
+config_app = typer.Typer(help="Configure AgentProbe settings")
+app.add_typer(config_app, name="config")
+
+
+@config_app.command("set")
+def config_set(
+    key: str = typer.Argument(..., help="Configuration key (e.g., sharing.enabled)"),
+    value: str = typer.Argument(..., help="Configuration value"),
+):
+    """Set a configuration value."""
+    submitter = ResultSubmitter()
+    
+    if key == "sharing.enabled":
+        enabled = value.lower() in ("true", "yes", "1", "on")
+        submitter.enable_sharing(enabled)
+    elif key == "sharing.api_key":
+        config = submitter._load_config()
+        config["api_key"] = value
+        submitter.save_config(config)
+        typer.echo("[green]API key configured[/green]")
+    elif key == "sharing.api_url":
+        config = submitter._load_config()
+        config["api_url"] = value
+        submitter.save_config(config)
+        typer.echo(f"[green]API URL set to: {value}[/green]")
+    else:
+        typer.echo(f"[red]Unknown configuration key: {key}[/red]", err=True)
+        typer.echo("Available keys: sharing.enabled, sharing.api_key, sharing.api_url")
+        raise typer.Exit(1)
+
+
+@config_app.command("get")
+def config_get(
+    key: Optional[str] = typer.Argument(None, help="Configuration key to get"),
+):
+    """Get configuration values."""
+    submitter = ResultSubmitter()
+    config = submitter._load_config()
+    
+    if key:
+        # Get specific key
+        parts = key.split(".")
+        value = config
+        for part in parts:
+            value = value.get(part, "")
+        typer.echo(f"{key}: {value}")
+    else:
+        # Show all config
+        typer.echo("Current configuration:")
+        typer.echo(f"  sharing.enabled: {config.get('enabled', False)}")
+        typer.echo(f"  sharing.api_url: {config.get('api_url', submitter.DEFAULT_API_URL)}")
+        typer.echo(f"  sharing.api_key: {'***' if config.get('api_key') else 'not set'}")
+        typer.echo(f"  sharing.anonymous_id: {config.get('anonymous_id', 'not set')}")
 
 
 def main():
