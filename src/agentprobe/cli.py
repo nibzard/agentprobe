@@ -10,6 +10,7 @@ from .analyzer import aggregate_analyses, enhanced_analyze_trace
 from .reporter import print_report, print_aggregate_report
 from .submission import ResultSubmitter
 from .models import TestResult
+from . import __version__
 
 
 async def show_community_comparison(tool: str, scenario: str, user_duration: float, user_success: bool) -> None:
@@ -78,11 +79,30 @@ async def show_community_comparison(tool: str, scenario: str, user_duration: flo
         # Silently fail - don't disrupt the main test output
         pass
 
+def version_callback(value: bool):
+    """Show version information."""
+    if value:
+        print(f"agentprobe {__version__}")
+        raise typer.Exit()
+
 app = typer.Typer(
     name="agentprobe",
     help="Test how well AI agents interact with CLI tools",
     add_completion=False,
 )
+
+
+@app.callback()
+def global_options(
+    version: bool = typer.Option(
+        False, "--version", "-v", 
+        callback=version_callback, 
+        is_eager=True,
+        help="Show version and exit"
+    )
+):
+    """AgentProbe - Test how well AI agents interact with CLI tools."""
+    pass
 
 
 def print_trace_details(trace, run_label: str = ""):
