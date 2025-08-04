@@ -5,6 +5,7 @@ import re
 import json
 import asyncio
 import uuid
+import base64
 from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime, timezone
@@ -16,6 +17,34 @@ from pydantic import BaseModel, Field
 from rich import print
 
 from .models import TestResult
+
+
+# Embedded community API key (obfuscated)
+# This key is specific to this release and allows anonymous community data submission
+_EMBEDDED_KEY_DATA = "ABc6VxVJQlgHUz5VXwtfEAgKR05nVFEDVVJfU19CSBRZVFQAAVhZD0daXkZObFYABVcCBlRcREIXX1sDawIMVV0TWAhCHD4DCVcEA1BUCxJFQw4BADlUV19URFkPQUxuV1NWAw=="
+_OBFUSCATION_KEY = b"agentprobe_community_2024"
+
+
+def _deobfuscate_key(encoded_data: str, obf_key: bytes) -> str:
+    """Deobfuscate the embedded API key."""
+    try:
+        # Decode base64
+        encrypted = base64.b64decode(encoded_data.encode())
+        
+        # Simple XOR deobfuscation
+        key_len = len(obf_key)
+        decrypted = bytearray()
+        for i, byte in enumerate(encrypted):
+            decrypted.append(byte ^ obf_key[i % key_len])
+        
+        return decrypted.decode('utf-8')
+    except Exception:
+        return ""
+
+
+def _get_embedded_api_key() -> str:
+    """Get the embedded community API key for this release."""
+    return _deobfuscate_key(_EMBEDDED_KEY_DATA, _OBFUSCATION_KEY)
 
 
 class ClientInfo(BaseModel):
@@ -110,15 +139,23 @@ class DataSanitizer:
 class ResultSubmitter:
     """Handle submission of test results to the community API."""
     
-    DEFAULT_API_URL = "https://api.agentprobe.dev/v1"
+    DEFAULT_API_URL = "https://agentprobe-community-production.nikola-balic.workers.dev/api/v1"
     CONFIG_FILE = Path.home() / ".agentprobe" / "sharing.json"
     
     def __init__(self, api_url: Optional[str] = None, api_key: Optional[str] = None):
         """Initialize the result submitter."""
-        self.api_url = api_url or self._load_config().get('api_url', self.DEFAULT_API_URL)
-        self.api_key = api_key or self._load_config().get('api_key')
-        self.enabled = self._load_config().get('enabled', False)
-        self.include_traces = self._load_config().get('include_traces', False)
+        config = self._load_config()
+        
+        # Use production URL by default
+        self.api_url = api_url or config.get('api_url', self.DEFAULT_API_URL)
+        
+        # Use embedded community key if no user key configured
+        self.api_key = api_key or config.get('api_key') or _get_embedded_api_key()
+        
+        # Opt-in by default - check for explicit opt-out
+        self.enabled = not config.get('opted_out', False)
+        
+        self.include_traces = config.get('include_traces', False)
         self.anonymous_id = self._get_anonymous_id()
     
     def _load_config(self) -> Dict[str, Any]:
@@ -252,6 +289,14 @@ class ResultSubmitter:
     
     async def submit_result(self, result: TestResult, force: bool = False) -> bool:
         """Submit a test result to the API."""
+        # Handle first-run consent
+        if self.is_first_run():
+            consent_given = self.show_consent_dialog()
+            # Update enabled status based on consent
+            self.enabled = consent_given
+            if not consent_given:
+                return False
+        
         if not self.enabled and not force:
             return False
         
@@ -283,12 +328,71 @@ class ResultSubmitter:
             print(f"[red]Error sharing result: {e}[/red]")
             return False
     
-    def enable_sharing(self, enabled: bool = True) -> None:
-        """Enable or disable result sharing."""
+    def opt_out(self, opted_out: bool = True) -> None:
+        """Opt out of community data sharing."""
         config = self._load_config()
-        config['enabled'] = enabled
+        config['opted_out'] = opted_out
         self.save_config(config)
-        self.enabled = enabled
+        self.enabled = not opted_out
         
-        status = "enabled" if enabled else "disabled"
-        print(f"[green]Result sharing {status}[/green]")
+        if opted_out:
+            print("[yellow]You have opted out of community data sharing[/yellow]")
+            print("[dim]Your test results will only be stored locally[/dim]")
+        else:
+            print("[green]Community data sharing is now enabled[/green]")
+            print("[dim]Anonymous test results will help improve CLI tools for AI agents[/dim]")
+    
+    def enable_sharing(self, enabled: bool = True) -> None:
+        """Enable or disable result sharing (legacy method)."""
+        # Convert to new opt-out model
+        self.opt_out(not enabled)
+    
+    def is_first_run(self) -> bool:
+        """Check if this is the first run (no consent given yet)."""
+        config = self._load_config()
+        return not config.get('consent_given', False)
+    
+    def show_consent_dialog(self) -> bool:
+        """Show consent dialog for first-time users. Returns True if user consents."""
+        print("\n[bold blue]🤖 Welcome to AgentProbe![/bold blue]")
+        print()
+        print("[dim]AgentProbe collects anonymous usage data to improve CLI tools for AI agents.[/dim]")
+        print("[dim]This helps identify common friction points and success patterns.[/dim]")
+        print()
+        print("[green]✓ Data is anonymized and sanitized[/green]")
+        print("[green]✓ No personal information is collected[/green]") 
+        print("[green]✓ You can opt out anytime with: agentprobe config set sharing.opted_out true[/green]")
+        print()
+        print("[dim]Learn more: https://github.com/nikola-ai/agentprobe#privacy[/dim]")
+        print()
+        
+        try:
+            while True:
+                response = input("Share anonymous data to help improve CLI tools? [Y/n]: ").strip().lower()
+                if response in ['', 'y', 'yes']:
+                    # User consents - save this choice
+                    config = self._load_config()
+                    config['opted_out'] = False
+                    config['consent_given'] = True
+                    self.save_config(config)
+                    print("[green]Thank you! Your anonymous data will help improve CLI tools for everyone.[/green]")
+                    return True
+                elif response in ['n', 'no']:
+                    # User opts out
+                    config = self._load_config()
+                    config['opted_out'] = True
+                    config['consent_given'] = True
+                    self.save_config(config)
+                    print("[yellow]No problem! AgentProbe will work locally without sharing data.[/yellow]")
+                    return False
+                else:
+                    print("Please enter 'y' for yes or 'n' for no.")
+        except (EOFError, KeyboardInterrupt):
+            # Non-interactive environment or user interrupted - default to consent
+            config = self._load_config()
+            config['opted_out'] = False
+            config['consent_given'] = True
+            self.save_config(config)
+            print("\n[green]Proceeding with anonymous data sharing to help improve CLI tools.[/green]")
+            print("[dim]You can opt out anytime with: agentprobe config set sharing.opted_out true[/dim]")
+            return True
