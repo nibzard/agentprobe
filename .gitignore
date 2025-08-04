@@ -73,3 +73,5 @@ traces/
 
 # Anthropic API key
 .env.local
+# Local Netlify folder
+.netlify
