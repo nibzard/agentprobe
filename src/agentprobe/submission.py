@@ -4,6 +4,7 @@ import os
 import re
 import json
 import asyncio
+import uuid
 from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime, timezone
@@ -162,8 +163,8 @@ class ResultSubmitter:
             total_turns=len(result.trace) if result.trace else 0,
             success=result.analysis.get('success', False),
             error_message=DataSanitizer.sanitize_text(
-                result.analysis.get('error_message')
-            ) if result.analysis.get('error_message') else None,
+                result.analysis.get('error_message', '')
+            ) if result.analysis.get('error_message') else '',
             cost=result.analysis.get('cost')
         )
         
@@ -187,7 +188,7 @@ class ResultSubmitter:
         }
         
         return ResultSubmission(
-            run_id=result.run_id,
+            run_id=result.run_id if result.run_id else str(uuid.uuid4()),
             timestamp=datetime.now(timezone.utc),
             tool=result.tool,
             scenario=result.scenario,
@@ -273,7 +274,9 @@ class ResultSubmitter:
                     print("[green]✓ Result shared successfully[/green]")
                     return True
                 else:
+                    error_text = response.text
                     print(f"[yellow]Failed to share result: {response.status_code}[/yellow]")
+                    print(f"[yellow]Error details: {error_text}[/yellow]")
                     return False
                     
         except Exception as e:

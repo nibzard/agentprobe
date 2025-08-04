@@ -97,7 +97,7 @@ def test(
                         tool=result["tool"],
                         scenario=result["scenario"],
                         trace=result["trace"],
-                        duration=result["duration"],
+                        duration=result["duration_seconds"],
                         analysis=analysis
                     )
                     await submitter.submit_result(test_result, force=True)
@@ -190,7 +190,7 @@ def benchmark(
                             tool=result["tool"],
                             scenario=result["scenario"],
                             trace=result["trace"],
-                            duration=result["duration"],
+                            duration=result["duration_seconds"],
                             analysis=analysis
                         )
                         await submitter.submit_result(test_result, force=True)
