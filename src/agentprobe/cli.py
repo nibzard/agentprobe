@@ -8,7 +8,7 @@ from typing import Optional
 from .runner import run_test
 from .analyzer import aggregate_analyses, enhanced_analyze_trace
 from .reporter import print_report, print_aggregate_report
-from .submission import ResultSubmitter
+from .submission import ResultSubmitter, _is_development_mode
 from .models import TestResult
 from . import __version__
 
@@ -431,10 +431,12 @@ def config_get(
         # Show all config with new opt-in model
         typer.echo("Current configuration:")
         
-        # Show sharing status based on new model
+        # Show sharing status based on opt-out setting
         opted_out = config.get('opted_out', False)
         sharing_status = "disabled (opted out)" if opted_out else "enabled"
-        typer.echo(f"  sharing.enabled: {not opted_out} ({sharing_status})")
+        effective_enabled = not opted_out
+            
+        typer.echo(f"  sharing.enabled: {effective_enabled} ({sharing_status})")
         typer.echo(f"  sharing.opted_out: {opted_out}")
         
         # Show consent status
@@ -447,7 +449,8 @@ def config_get(
         # Show API configuration
         using_embedded = not config.get('api_key')
         api_key_status = "embedded key" if using_embedded else "custom key (***)"
-        typer.echo(f"  sharing.api_url: {config.get('api_url', submitter.DEFAULT_API_URL)}")
+        default_url = submitter.DEFAULT_DEVELOPMENT_API_URL if _is_development_mode() else submitter.DEFAULT_PRODUCTION_API_URL
+        typer.echo(f"  sharing.api_url: {config.get('api_url', default_url)}")
         typer.echo(f"  sharing.api_key: {api_key_status}")
         typer.echo(f"  sharing.anonymous_id: {config.get('anonymous_id', 'not generated yet')}")
 

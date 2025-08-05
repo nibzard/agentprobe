@@ -30,13 +30,13 @@ def _deobfuscate_key(encoded_data: str, obf_key: bytes) -> str:
     try:
         # Decode base64
         encrypted = base64.b64decode(encoded_data.encode())
-        
+
         # Simple XOR deobfuscation
         key_len = len(obf_key)
         decrypted = bytearray()
         for i, byte in enumerate(encrypted):
             decrypted.append(byte ^ obf_key[i % key_len])
-        
+
         return decrypted.decode('utf-8')
     except Exception:
         return ""
@@ -95,7 +95,7 @@ class ResultSubmission(BaseModel):
 
 class DataSanitizer:
     """Sanitize sensitive data from test results."""
-    
+
     # Patterns for sensitive data
     PATTERNS = {
         'api_key': re.compile(r'(api[_-]?key|token|secret|password)[\s:=]+[\w-]+', re.IGNORECASE),
@@ -104,27 +104,27 @@ class DataSanitizer:
         'home_path': re.compile(r'/(?:home|Users)/[^/\s]+'),
         'auth_header': re.compile(r'(Authorization|Bearer)[\s:]+[\w-]+', re.IGNORECASE),
     }
-    
+
     @classmethod
     def sanitize_text(cls, text: str) -> str:
         """Remove sensitive information from text."""
         if not text:
             return text
-            
+
         # Replace sensitive patterns
         text = cls.PATTERNS['api_key'].sub('[REDACTED_KEY]', text)
         text = cls.PATTERNS['email'].sub('[REDACTED_EMAIL]', text)
         text = cls.PATTERNS['ip_address'].sub('[REDACTED_IP]', text)
         text = cls.PATTERNS['home_path'].sub('/[REDACTED_PATH]', text)
         text = cls.PATTERNS['auth_header'].sub('[REDACTED_AUTH]', text)
-        
+
         return text
-    
+
     @classmethod
     def sanitize_list(cls, items: list[str]) -> list[str]:
         """Sanitize a list of strings."""
         return [cls.sanitize_text(item) for item in items]
-    
+
     @classmethod
     def sanitize_path(cls, path: str) -> str:
         """Sanitize file paths."""
@@ -136,28 +136,45 @@ class DataSanitizer:
         return path
 
 
+def _is_development_mode() -> bool:
+    """Detect if running in development mode (local source) vs production (installed package)."""
+    # For now, always use production mode to avoid localhost connection issues
+    # This can be re-enabled when local development server is needed
+    return False
+
+
 class ResultSubmitter:
     """Handle submission of test results to the community API."""
-    
-    DEFAULT_API_URL = "https://agentprobe-community-production.nikola-balic.workers.dev/api/v1"
+
+    DEFAULT_PRODUCTION_API_URL = "https://agentprobe-community-production.nikola-balic.workers.dev/api/v1"
+    DEFAULT_DEVELOPMENT_API_URL = "http://localhost:8787/api/v1"
     CONFIG_FILE = Path.home() / ".agentprobe" / "sharing.json"
-    
+
     def __init__(self, api_url: Optional[str] = None, api_key: Optional[str] = None):
         """Initialize the result submitter."""
         config = self._load_config()
-        
-        # Use production URL by default
-        self.api_url = api_url or config.get('api_url', self.DEFAULT_API_URL)
-        
+
+        # Choose API URL based on environment
+        if api_url:
+            self.api_url = api_url
+        elif config.get('api_url') and str(config['api_url']).strip():  # Check for non-empty, non-whitespace value
+            self.api_url = config['api_url']
+        else:
+            # Auto-detect development vs production
+            if _is_development_mode():
+                self.api_url = self.DEFAULT_DEVELOPMENT_API_URL
+            else:
+                self.api_url = self.DEFAULT_PRODUCTION_API_URL
+
         # Use embedded community key if no user key configured
         self.api_key = api_key or config.get('api_key') or _get_embedded_api_key()
-        
+
         # Opt-in by default - check for explicit opt-out
         self.enabled = not config.get('opted_out', False)
-        
+
         self.include_traces = config.get('include_traces', False)
         self.anonymous_id = self._get_anonymous_id()
-    
+
     def _load_config(self) -> Dict[str, Any]:
         """Load sharing configuration."""
         if self.CONFIG_FILE.exists():
@@ -166,12 +183,12 @@ class ResultSubmitter:
             except Exception:
                 pass
         return {}
-    
+
     def save_config(self, config: Dict[str, Any]) -> None:
         """Save sharing configuration."""
         self.CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         self.CONFIG_FILE.write_text(json.dumps(config, indent=2))
-    
+
     def _get_anonymous_id(self) -> str:
         """Get or create anonymous user ID."""
         config = self._load_config()
@@ -182,7 +199,7 @@ class ResultSubmitter:
             config['anonymous_id'] = anonymous_id
             self.save_config(config)
         return config['anonymous_id']
-    
+
     def _prepare_payload(self, result: TestResult) -> ResultSubmission:
         """Prepare submission payload from test result."""
         # Extract client info
@@ -193,7 +210,7 @@ class ResultSubmitter:
             python_version=platform.python_version(),
             claude_code_version=self._get_claude_version()
         )
-        
+
         # Extract execution metrics
         execution = ExecutionMetrics(
             duration=result.duration,
@@ -204,7 +221,7 @@ class ResultSubmitter:
             ) if result.analysis.get('error_message') else '',
             cost=result.analysis.get('cost')
         )
-        
+
         # Extract analysis data
         analysis = AnalysisData(
             friction_points=result.analysis.get('friction_points', []),
@@ -214,16 +231,16 @@ class ResultSubmitter:
                 result.analysis.get('recommendations', [])
             )
         )
-        
+
         # Create sanitized trace summary
         trace_summary = self._create_trace_summary(result)
-        
+
         # Get tool version
         environment = {
             'tool_version': self._get_tool_version(result.tool),
             'anonymous_user_id': self.anonymous_id
         }
-        
+
         return ResultSubmission(
             run_id=result.run_id if result.run_id else str(uuid.uuid4()),
             timestamp=datetime.now(timezone.utc),
@@ -235,14 +252,14 @@ class ResultSubmitter:
             analysis=analysis,
             trace_summary=trace_summary
         )
-    
+
     def _create_trace_summary(self, result: TestResult) -> TraceSummary:
         """Create sanitized trace summary."""
         summary = TraceSummary()
-        
+
         if not self.include_traces or not result.trace:
             return summary
-        
+
         # Extract commands from trace
         for message in result.trace:
             if message.role == 'assistant' and message.content:
@@ -254,17 +271,17 @@ class ResultSubmitter:
                         summary.commands_executed.append(
                             DataSanitizer.sanitize_text(cmd)
                         )
-        
+
         # Sanitize commands
         summary.commands_executed = summary.commands_executed[:10]  # Limit
-        
+
         # Extract final output
         if result.trace and result.trace[-1].content:
             snippet = result.trace[-1].content[:200]
             summary.final_output_snippet = DataSanitizer.sanitize_text(snippet)
-        
+
         return summary
-    
+
     def _get_version(self) -> str:
         """Get AgentProbe version."""
         try:
@@ -272,7 +289,7 @@ class ResultSubmitter:
             return __version__
         except ImportError:
             return "unknown"
-    
+
     def _get_claude_version(self) -> Optional[str]:
         """Get Claude Code SDK version."""
         try:
@@ -280,13 +297,13 @@ class ResultSubmitter:
             return getattr(claude_code_sdk, '__version__', None)
         except ImportError:
             return None
-    
+
     def _get_tool_version(self, tool: str) -> Optional[str]:
         """Get tool version from system."""
         # This would be implemented to check tool versions
         # For now, return placeholder
         return "unknown"
-    
+
     async def submit_result(self, result: TestResult, force: bool = False) -> bool:
         """Submit a test result to the API."""
         # Handle first-run consent
@@ -296,25 +313,35 @@ class ResultSubmitter:
             self.enabled = consent_given
             if not consent_given:
                 return False
-        
+
         if not self.enabled and not force:
             return False
-        
+
+        # Validate API URL
+        if not self.api_url or not self.api_url.strip():
+            print("[red]Error: API URL is not configured[/red]")
+            return False
+
+        if not (self.api_url.startswith('http://') or self.api_url.startswith('https://')):
+            print(f"[red]Error: Invalid API URL format: {self.api_url}[/red]")
+            return False
+
         try:
             payload = self._prepare_payload(result)
-            
+
             async with httpx.AsyncClient() as client:
                 headers = {}
                 if self.api_key:
-                    headers['Authorization'] = f"Bearer {self.api_key}"
-                
+                    # Both local and production agentprobe-community servers use X-API-Key format
+                    headers['X-API-Key'] = self.api_key
+
                 response = await client.post(
                     f"{self.api_url}/results",
                     json=payload.model_dump(mode='json'),
                     headers=headers,
                     timeout=30.0
                 )
-                
+
                 if response.status_code == 200:
                     print("[green]✓ Result shared successfully[/green]")
                     return True
@@ -323,35 +350,35 @@ class ResultSubmitter:
                     print(f"[yellow]Failed to share result: {response.status_code}[/yellow]")
                     print(f"[yellow]Error details: {error_text}[/yellow]")
                     return False
-                    
+
         except Exception as e:
             print(f"[red]Error sharing result: {e}[/red]")
             return False
-    
+
     def opt_out(self, opted_out: bool = True) -> None:
         """Opt out of community data sharing."""
         config = self._load_config()
         config['opted_out'] = opted_out
         self.save_config(config)
         self.enabled = not opted_out
-        
+
         if opted_out:
             print("[yellow]You have opted out of community data sharing[/yellow]")
             print("[dim]Your test results will only be stored locally[/dim]")
         else:
             print("[green]Community data sharing is now enabled[/green]")
             print("[dim]Anonymous test results will help improve CLI tools for AI agents[/dim]")
-    
+
     def enable_sharing(self, enabled: bool = True) -> None:
         """Enable or disable result sharing (legacy method)."""
         # Convert to new opt-out model
         self.opt_out(not enabled)
-    
+
     def is_first_run(self) -> bool:
         """Check if this is the first run (no consent given yet)."""
         config = self._load_config()
         return not config.get('consent_given', False)
-    
+
     def show_consent_dialog(self) -> bool:
         """Show consent dialog for first-time users. Returns True if user consents."""
         print("\n[bold blue]🤖 Welcome to AgentProbe![/bold blue]")
@@ -360,12 +387,12 @@ class ResultSubmitter:
         print("[dim]This helps identify common friction points and success patterns.[/dim]")
         print()
         print("[green]✓ Data is anonymized and sanitized[/green]")
-        print("[green]✓ No personal information is collected[/green]") 
+        print("[green]✓ No personal information is collected[/green]")
         print("[green]✓ You can opt out anytime with: agentprobe config set sharing.opted_out true[/green]")
         print()
-        print("[dim]Learn more: https://github.com/nikola-ai/agentprobe#privacy[/dim]")
+        print("[dim]Learn more: https://github.com/nibzard/agentprobe#privacy[/dim]")
         print()
-        
+
         try:
             while True:
                 response = input("Share anonymous data to help improve CLI tools? [Y/n]: ").strip().lower()

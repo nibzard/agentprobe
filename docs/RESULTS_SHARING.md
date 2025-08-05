@@ -153,6 +153,81 @@ agentprobe config set sharing.api_url "https://your-api.example.com/v1"
 agentprobe config set sharing.api_key "your-custom-key"
 ```
 
+### Local Development Setup
+
+If you're running the agentprobe-community backend locally for development:
+
+#### 1. Start Local Backend
+
+```bash
+# In your agentprobe-community repository
+cd packages/api
+pnpm run dev  # Starts server at http://localhost:8787
+```
+
+#### 2. Configure AgentProbe for Local Development
+
+AgentProbe automatically detects when running from source and uses `localhost:8787`:
+
+```bash
+# From agentprobe source directory (development mode)
+uv run agentprobe test git --scenario status
+# → Automatically uses http://localhost:8787/api/v1
+
+# From installed package (production mode)  
+uvx agentprobe test git --scenario status
+# → Uses production API: https://agentprobe-community-production.nikola-balic.workers.dev/api/v1
+```
+
+#### 3. Set Up Local API Key
+
+Your local development server requires a valid API key. Check your agentprobe-community configuration for:
+
+1. **Database seed files** - Look for pre-configured development API keys
+2. **Environment variables** - Check `.env` files for `API_KEY` settings  
+3. **Admin endpoints** - Use API key management endpoints if available
+
+```bash
+# Configure local development API key
+agentprobe config set sharing.api_key "your-local-dev-api-key"
+
+# Verify configuration
+agentprobe config get
+```
+
+#### 4. Authentication Headers
+
+Both local and production servers use the same authentication format:
+
+```bash
+# All requests use X-API-Key header (not Authorization: Bearer)
+curl -X POST http://localhost:8787/api/v1/results \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"test": "data"}'
+```
+
+#### 5. Development vs Production Behavior
+
+| Environment | API URL | API Key | Detection |
+|-------------|---------|---------|-----------|
+| **Development** (`uv run agentprobe`) | `http://localhost:8787/api/v1` | Custom local key | Source directory + `.git` |
+| **Production** (`uvx agentprobe`) | `https://agentprobe-community-production.nikola-balic.workers.dev/api/v1` | Embedded community key | Installed package |
+
+#### Troubleshooting Local Development
+
+```bash
+# Check if local server is running
+curl http://localhost:8787/health
+
+# Test API key validity
+curl -H "X-API-Key: your-key" http://localhost:8787/api/v1/results
+
+# Reset to production (clear local overrides)
+agentprobe config set sharing.api_key ""
+agentprobe config set sharing.api_url ""
+```
+
 ## Community API
 
 The AgentProbe community runs on a secure, scalable API:

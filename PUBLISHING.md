@@ -1,6 +1,6 @@
 # Publishing to PyPI
 
-This document provides step-by-step instructions for publishing AgentProbe to PyPI, based on lessons learned from actual publishing experience.
+This document provides step-by-step instructions for publishing AgentProbe to PyPI, based on lessons learned from actual publishing experience, including the major v0.2.0 community-first architecture release and v0.2.1 patch with --version flag.
 
 ## Prerequisites
 
@@ -13,71 +13,136 @@ This document provides step-by-step instructions for publishing AgentProbe to Py
    pass insert pypi/production-token
    ```
 
-2. **Version Management**: Always increment the version in `pyproject.toml` before publishing to avoid conflicts with existing packages.
+2. **Version Synchronization**: Always keep versions synchronized across files:
+   - `pyproject.toml` - Primary version source
+   - `src/agentprobe/__init__.py` - Used by CLI --version flag
+   
+3. **Git State**: Ensure all changes are committed before publishing to maintain clean release history.
 
 ## Publishing Process
 
-### Step 1: Check and Update Version
+### Step 1: Prepare Release
 
-1. Check the current version in `pyproject.toml`:
+1. **Check Current Versions**:
    ```bash
+   # Check pyproject.toml version
    grep "version =" pyproject.toml
+   
+   # Check __init__.py version
+   grep "__version__" src/agentprobe/__init__.py
    ```
 
-2. If needed, update the version number to avoid conflicts:
-   ```toml
-   version = "0.1.x"  # Increment as needed
+2. **Update Versions Consistently**:
+   ```bash
+   # Update pyproject.toml
+   # version = "0.2.x"  # Increment as needed
+   
+   # Update __init__.py to match
+   # __version__ = "0.2.x"
    ```
 
-### Step 2: Clean and Build
+3. **Test Version Display**:
+   ```bash
+   uv run agentprobe --version
+   # Should output: agentprobe 0.2.x
+   ```
 
-1. Clean any existing builds to avoid publishing old versions:
+### Step 2: Commit and Tag Release
+
+1. **Commit All Changes**:
+   ```bash
+   git add .
+   git commit -m "feat: add new feature / fix: bug description
+   
+   🤖 Generated with [Claude Code](https://claude.ai/code)
+   
+   Co-Authored-By: Claude <noreply@anthropic.com>"
+   ```
+
+2. **Tag the Release**:
+   ```bash
+   git tag v0.2.x
+   git push origin main --tags
+   ```
+
+### Step 3: Clean and Build
+
+1. **Clean Previous Builds** (CRITICAL - prevents publishing old versions):
    ```bash
    rm -rf dist/
    ```
 
-2. Build the package:
+2. **Build the Package**:
    ```bash
    uv build
    ```
 
    This should create:
-   - `dist/agentprobe-x.x.x.tar.gz` (source distribution)
-   - `dist/agentprobe-x.x.x-py3-none-any.whl` (wheel)
+   - `dist/agentprobe-0.2.x.tar.gz` (source distribution)
+   - `dist/agentprobe-0.2.x-py3-none-any.whl` (wheel)
 
-### Step 3: Test on TestPyPI First
+### Step 4: Test on TestPyPI First
 
-1. Publish to TestPyPI:
+1. **Publish to TestPyPI**:
    ```bash
    uv publish --publish-url https://test.pypi.org/legacy/ --token $(pass pypi/testpypi-token)
    ```
 
-2. Test the TestPyPI installation:
+2. **Test Installation and Basic Functionality**:
    ```bash
+   # Test help
    uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agentprobe --help
+   
+   # Test version flag
+   uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agentprobe --version
+   
+   # Test community features (if applicable)
+   uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agentprobe community stats
    ```
 
-3. Verify the command works and displays the expected help output.
+3. **Verify Critical Features Work**:
+   - CLI commands load properly
+   - Version displays correctly
+   - Community features (if using embedded API keys) connect successfully
+   - No import errors or missing dependencies
 
-### Step 4: Publish to Production PyPI
+### Step 5: Publish to Production PyPI
 
-1. Only proceed if TestPyPI testing was successful.
+1. **Only Proceed if TestPyPI Was Successful** ⚠️
 
-2. Publish to production PyPI:
+2. **Publish to Production**:
    ```bash
    uv publish --token $(pass pypi/production-token)
    ```
 
-### Step 5: Verify Production Installation
+### Step 6: Verify Production Installation
 
-1. Test production installation:
+⏰ **Note**: PyPI propagation can take 5-15 minutes. Be patient.
+
+1. **Test Specific Version** (recommended):
    ```bash
+   # Test specific version to ensure you get the new release
+   uvx agentprobe@0.2.x --version
+   uvx agentprobe@0.2.x --help
+   ```
+
+2. **Test Latest Version**:
+   ```bash
+   # May take time to propagate
+   uvx agentprobe --version
    uvx agentprobe --help
    ```
 
-2. Run a quick benchmark to ensure everything works:
+3. **Test Community Features** (for versions with embedded keys):
    ```bash
-   uvx agentprobe benchmark --all --oauth-token-file ~/.agentprobe-token
+   # Clear local config for fresh test
+   rm -f ~/.agentprobe/sharing.json
+   
+   # Test consent flow and community sharing
+   echo "y" | uvx agentprobe@0.2.x test git --scenario status
+   
+   # Test community stats
+   uvx agentprobe@0.2.x community stats
    ```
 
 ## Common Issues and Solutions
@@ -87,25 +152,52 @@ This document provides step-by-step instructions for publishing AgentProbe to Py
 **Problem**: Trying to publish a version that already exists on PyPI.
 
 **Solution**: 
-1. Update the version number in `pyproject.toml`
+1. Update version in BOTH `pyproject.toml` AND `src/agentprobe/__init__.py`
 2. Clean the `dist/` directory: `rm -rf dist/`
 3. Rebuild: `uv build`
 4. Retry publishing
 
 ### Issue: Publishing Old Versions
 
-**Problem**: `uv publish` tries to upload all files in `dist/`, including old versions.
+**Problem**: `uv publish` uploads ALL files in `dist/`, including old versions.
 
 **Solution**: Always clean the `dist/` directory before building:
 ```bash
 rm -rf dist/ && uv build
 ```
 
-### Issue: TestPyPI vs PyPI Differences
+### Issue: Version Mismatch
 
-**Problem**: Package works on TestPyPI but fails on PyPI due to dependency differences.
+**Problem**: CLI shows different version than expected (e.g., `agentprobe --version` shows old version).
 
-**Solution**: Always test the full installation process on TestPyPI first, including running actual commands, not just `--help`.
+**Solution**: Ensure version synchronization:
+```bash
+# Check both files match
+grep "version =" pyproject.toml
+grep "__version__" src/agentprobe/__init__.py
+
+# Update both to match, then rebuild
+```
+
+### Issue: Community Features Not Working
+
+**Problem**: Embedded API keys don't work or community features fail.
+
+**Solution**: 
+1. Verify embedded key is properly obfuscated in `submission.py`
+2. Test with explicit version: `uvx agentprobe@0.2.x community stats`
+3. Check API endpoint is accessible
+4. Clear local config: `rm -f ~/.agentprobe/sharing.json`
+
+### Issue: PyPI Propagation Delays
+
+**Problem**: New version not available immediately after publishing.
+
+**Solution**: 
+- Wait 5-15 minutes for PyPI to propagate
+- Use specific version syntax: `uvx agentprobe@0.2.x`
+- Avoid `--force-reinstall` with uvx (doesn't work)
+- Check PyPI web interface to confirm upload
 
 ## Best Practices
 
@@ -113,42 +205,87 @@ rm -rf dist/ && uv build
 
 2. **Clean builds** - Always remove the `dist/` directory before building to avoid publishing old versions.
 
-3. **Version management** - Check if the version already exists on PyPI before attempting to publish.
+3. **Version Synchronization** - Keep `pyproject.toml` and `__init__.py` versions in sync for CLI --version flag.
 
-4. **Security** - Use `pass` or another secure method to store PyPI tokens instead of environment variables.
+4. **Git Workflow** - Commit, tag, and push before publishing for clean release history.
 
-5. **Verification** - Always verify the published package actually works by installing it fresh with `uvx`.
+5. **Security** - Use `pass` or another secure method to store PyPI tokens instead of environment variables.
+
+6. **Verification** - Always verify the published package works by installing specific version with `uvx package@version`.
+
+7. **Community Features** - Test embedded API keys and community functionality after publishing.
+
+8. **Patience with PyPI** - Allow 5-15 minutes for new releases to propagate before expecting availability.
 
 ## Version Increment Strategy
 
-- **Patch version** (0.1.x): Bug fixes, small improvements
-- **Minor version** (0.x.0): New features, backwards compatible
-- **Major version** (x.0.0): Breaking changes
+- **Patch version** (0.2.x): Bug fixes, small improvements (e.g., adding --version flag)
+- **Minor version** (0.x.0): New features, backwards compatible (e.g., community sharing system)
+- **Major version** (x.0.0): Breaking changes, API changes
 
-For this project, increment patch versions for most releases unless adding significant new features or making breaking changes.
+### Real Examples:
+- **v0.2.0**: Major community-first architecture with embedded API keys, consent flow, auto-sharing
+- **v0.2.1**: Added --version flag (patch - small improvement)
 
-## Post-Publishing Steps
+## Release Types and Commit Messages
 
-1. **Commit version change**:
-   ```bash
-   git add pyproject.toml
-   git commit -m "chore: bump version to x.x.x for PyPI release"
-   ```
+### Feature Releases (Minor versions)
+```bash
+git commit -m "feat: implement community-first architecture with automatic data sharing
 
-2. **Tag the release**:
-   ```bash
-   git tag v0.1.x
-   git push origin main --tags
-   ```
+- Add embedded API key system with obfuscation for zero-setup experience
+- Implement first-run consent dialog with clear privacy messaging
+- Remove --share flag requirement - all tests now contribute automatically
 
-3. **Update README or CHANGELOG** if needed to reflect the new version.
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+### Patch Releases
+```bash
+git commit -m "feat: add --version flag to CLI
+
+- Add version callback function to display version info
+- Support both --version and -v flags
+- Update __init__.py version to match pyproject.toml
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
 
 ## Troubleshooting
 
-If publishing fails:
-1. Check that tokens are correctly stored in `pass`
-2. Verify the version doesn't already exist on PyPI
-3. Ensure the `dist/` directory only contains the current version
-4. Check that all dependencies in `pyproject.toml` are available on PyPI
+### Publishing Failures
+1. **Check token storage**: `pass pypi/production-token` should return valid token
+2. **Version conflicts**: Ensure version doesn't exist on PyPI
+3. **Clean dist**: `rm -rf dist/` before building
+4. **Dependencies**: Verify all `pyproject.toml` dependencies exist on PyPI
+5. **Network issues**: Check PyPI status page
 
-For token issues, regenerate tokens on PyPI/TestPyPI and update them in `pass`.
+### Post-Publishing Issues
+1. **Package not available**: Wait 5-15 minutes for propagation
+2. **Wrong version installed**: Use `uvx package@specific-version`
+3. **Import errors**: Check dependencies and test on TestPyPI first
+4. **Community features failing**: Verify embedded API keys and network connectivity
+
+### Token Management
+- Regenerate tokens on PyPI/TestPyPI web interface if auth fails
+- Update in `pass`: `pass edit pypi/production-token`
+- Test token: `curl -H "Authorization: Bearer $(pass pypi/production-token)" https://pypi.org/simple/`
+
+### Quick Debug Checklist
+```bash
+# Version sync check
+grep "version =" pyproject.toml && grep "__version__" src/agentprobe/__init__.py
+
+# Clean build
+rm -rf dist/ && uv build
+
+# Test local version
+uv run agentprobe --version
+
+# Check PyPI upload
+ls -la dist/  # Should only show current version files
+```

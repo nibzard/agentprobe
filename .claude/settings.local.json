@@ -11,7 +11,9 @@
       "Bash(git push:*)",
       "Bash(find:*)",
       "Bash(gh pr view:*)",
-      "Bash(uvx agentprobe:*)"
+      "Bash(uvx agentprobe:*)",
+      "Bash(uvx:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
