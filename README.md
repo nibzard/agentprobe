@@ -19,7 +19,7 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test vercel 
 
 # Or install locally for development
 uv sync
-uv run agentprobe test vercel --scenario deploy
+uv run agentprobe test git --scenario status
 ```
 
 ## Authentication

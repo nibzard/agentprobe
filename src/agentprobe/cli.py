@@ -30,16 +30,26 @@ async def show_community_comparison(tool: str, scenario: str, user_duration: flo
             else:
                 return  # No community data available
         
-        # Extract community metrics
-        community_success_rate = scenario_stats.get('success_rate', 0)
-        if community_success_rate <= 1:
-            community_success_rate *= 100  # Convert to percentage
+        # Extract community metrics with normalization
+        def normalize_success_rate(rate):
+            if rate is None:
+                return 0.0
+            if rate <= 1:
+                return rate * 100  # Convert from decimal to percentage
+            return rate  # Already in percentage format
+            
+        community_success_rate = normalize_success_rate(scenario_stats.get('success_rate', 0))
         
         community_avg_duration = scenario_stats.get('avg_duration', 0)
         total_runs = scenario_stats.get('total_runs', 0)
         
-        if total_runs == 0:
-            return  # No meaningful data
+        # Validate community data
+        if (total_runs == 0 or 
+            not isinstance(total_runs, (int, float)) or 
+            not isinstance(community_success_rate, (int, float)) or
+            not isinstance(community_avg_duration, (int, float)) or
+            total_runs < 0 or community_success_rate < 0 or community_avg_duration < 0):
+            return  # Invalid or no meaningful data
         
         # Import Rich print for proper markup rendering
         from rich import print as rich_print

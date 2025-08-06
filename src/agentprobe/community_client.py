@@ -22,7 +22,7 @@ class CommunityAPIClient:
         """Get statistics for a specific tool."""
         try:
             async with httpx.AsyncClient() as client:
-                headers = {"Authorization": f"Bearer {self.api_key}"}
+                headers = {"X-API-Key": self.api_key}
                 response = await client.get(
                     f"{self.api_url}/stats/tool/{tool}",
                     headers=headers,
@@ -32,7 +32,14 @@ class CommunityAPIClient:
                 if response.status_code == 200:
                     data = response.json()
                     # Extract the actual data from the API response
-                    return data.get("data", {}) if isinstance(data, dict) else data
+                    stats_data = data.get("data", {}) if isinstance(data, dict) else data
+                    
+                    # Validate the stats data
+                    if self._validate_stats_data(stats_data):
+                        return stats_data
+                    else:
+                        print(f"[yellow]Invalid community data received for {tool}[/yellow]")
+                        return None
                 else:
                     print(f"[yellow]Could not fetch stats for {tool}: {response.status_code}[/yellow]")
                     return None
@@ -44,7 +51,7 @@ class CommunityAPIClient:
         """Get the community leaderboard."""
         try:
             async with httpx.AsyncClient() as client:
-                headers = {"Authorization": f"Bearer {self.api_key}"}
+                headers = {"X-API-Key": self.api_key}
                 response = await client.get(
                     f"{self.api_url}/leaderboard",
                     headers=headers,
@@ -66,7 +73,7 @@ class CommunityAPIClient:
         """Get statistics for a specific scenario."""
         try:
             async with httpx.AsyncClient() as client:
-                headers = {"Authorization": f"Bearer {self.api_key}"}
+                headers = {"X-API-Key": self.api_key}
                 response = await client.get(
                     f"{self.api_url}/stats/scenario/{tool}/{scenario}",
                     headers=headers,
@@ -76,7 +83,14 @@ class CommunityAPIClient:
                 if response.status_code == 200:
                     data = response.json()
                     # Extract the actual data from the API response
-                    return data.get("data", {}) if isinstance(data, dict) else data
+                    stats_data = data.get("data", {}) if isinstance(data, dict) else data
+                    
+                    # Validate the stats data
+                    if self._validate_stats_data(stats_data):
+                        return stats_data
+                    else:
+                        print(f"[yellow]Invalid community data received for {tool}/{scenario}[/yellow]")
+                        return None
                 else:
                     print(f"[yellow]Could not fetch scenario stats: {response.status_code}[/yellow]")
                     return None
@@ -88,7 +102,7 @@ class CommunityAPIClient:
         """Get recent results for a specific tool/scenario."""
         try:
             async with httpx.AsyncClient() as client:
-                headers = {"Authorization": f"Bearer {self.api_key}"}
+                headers = {"X-API-Key": self.api_key}
                 response = await client.get(
                     f"{self.api_url}/results",
                     headers=headers,
@@ -105,6 +119,36 @@ class CommunityAPIClient:
             print(f"[red]Error fetching recent results: {e}[/red]")
             return None
     
+    def _normalize_success_rate(self, success_rate: float) -> float:
+        """Normalize success rate to percentage (0-100 range)."""
+        if success_rate is None:
+            return 0.0
+        if success_rate <= 1:
+            return success_rate * 100  # Convert from decimal to percentage
+        return success_rate  # Already in percentage format
+
+    def _validate_stats_data(self, data: Dict[str, Any]) -> bool:
+        """Validate statistics data from API response."""
+        if not isinstance(data, dict):
+            return False
+        
+        # Check required fields exist and have valid types
+        required_numeric_fields = ['total_runs', 'success_rate', 'avg_duration']
+        
+        for field in required_numeric_fields:
+            if field in data:
+                value = data[field]
+                if not isinstance(value, (int, float)) or value < 0:
+                    print(f"[yellow]Warning: Invalid {field} value in community data: {value}[/yellow]")
+                    return False
+        
+        # Validate total_runs makes sense
+        total_runs = data.get('total_runs', 0)
+        if total_runs == 0:
+            return False  # No point showing stats with zero runs
+            
+        return True
+
     def display_tool_stats(self, stats: Dict[str, Any], tool: str) -> None:
         """Display tool statistics in a formatted table."""
         print(f"\n[bold blue]📊 Community Statistics for {tool.upper()}[/bold blue]")
@@ -114,10 +158,7 @@ class CommunityAPIClient:
         table.add_column("Value", justify="right")
         
         if "success_rate" in stats:
-            # Handle both percentage (0-100) and decimal (0-1) formats
-            success_rate = stats['success_rate']
-            if success_rate <= 1:
-                success_rate *= 100  # Convert from decimal to percentage
+            success_rate = self._normalize_success_rate(stats['success_rate'])
             table.add_row("Success Rate", f"{success_rate:.1f}%")
         if "total_runs" in stats:
             table.add_row("Total Runs", str(stats['total_runs']))
@@ -148,10 +189,8 @@ class CommunityAPIClient:
         for i, entry in enumerate(leaderboard[:10], 1):  # Show top 10
             rank_style = "gold1" if i == 1 else "silver" if i == 2 else "yellow4" if i == 3 else "white"
             
-            # Handle success rate format (decimal to percentage)
-            success_rate = entry.get('success_rate', 0)
-            if success_rate <= 1:
-                success_rate *= 100
+            # Use normalized success rate
+            success_rate = self._normalize_success_rate(entry.get('success_rate', 0))
             
             table.add_row(
                 str(i),

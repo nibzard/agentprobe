@@ -298,9 +298,41 @@ class ResultSubmitter:
 
     def _get_tool_version(self, tool: str) -> Optional[str]:
         """Get tool version from system."""
-        # This would be implemented to check tool versions
-        # For now, return placeholder
-        return "unknown"
+        import subprocess
+        
+        try:
+            # Try common version flags
+            version_commands = [
+                [tool, "--version"],
+                [tool, "-v"],
+                [tool, "version"],
+                [tool, "-V"]
+            ]
+            
+            for cmd in version_commands:
+                try:
+                    result = subprocess.run(
+                        cmd, 
+                        capture_output=True, 
+                        text=True, 
+                        timeout=5
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        # Extract version from output (first line, common patterns)
+                        output = result.stdout.strip().split('\n')[0]
+                        # Look for version patterns like "tool v1.2.3" or "1.2.3"
+                        import re
+                        version_match = re.search(r'v?(\d+\.\d+\.\d+)', output)
+                        if version_match:
+                            return version_match.group(1)
+                        # If no pattern match, return the first line (might contain version)
+                        return output[:50]  # Limit length
+                except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+                    continue
+                    
+            return "unknown"
+        except Exception:
+            return "unknown"
 
     async def submit_result(self, result: TestResult, force: bool = False) -> bool:
         """Submit a test result to the API."""
