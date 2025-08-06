@@ -2,6 +2,7 @@
 
 import os
 import time
+import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional
 from claude_code_sdk import query, ClaudeCodeOptions, ResultMessage
@@ -11,6 +12,129 @@ from rich.live import Live
 
 from .config import load_oauth_token
 from .scenario_parser import parse_scenario, get_scenario_options
+
+
+def _clean_version_string(tool: str, version_line: str) -> str:
+    """Clean up version output to extract just the version number.
+    
+    Args:
+        tool: The tool name (e.g., 'git', 'vercel')
+        version_line: Raw version output line
+        
+    Returns:
+        Cleaned version string
+    """
+    import re
+    
+    # Common patterns to clean up
+    # For "git version 2.39.5 (Apple Git-154)" -> "2.39.5"
+    if tool == "git" and "git version " in version_line:
+        match = re.search(r'git version (\d+\.\d+\.\d+)', version_line)
+        if match:
+            return match.group(1)
+    
+    # For "vercel 28.4.8" -> "28.4.8"
+    if tool == "vercel":
+        match = re.search(r'vercel (\d+\.\d+\.\d+)', version_line)
+        if match:
+            return match.group(1)
+    
+    # For "gh version 2.32.1 (2023-07-18)" -> "2.32.1"
+    if tool == "gh":
+        match = re.search(r'gh version (\d+\.\d+\.\d+)', version_line)
+        if match:
+            return match.group(1)
+    
+    # For "Docker version 24.0.5, build ced0996" -> "24.0.5"
+    if tool == "docker":
+        match = re.search(r'Docker version (\d+\.\d+\.\d+)', version_line)
+        if match:
+            return match.group(1)
+    
+    # Generic pattern: extract first semantic version found
+    version_match = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)', version_line)
+    if version_match:
+        return version_match.group(1)
+    
+    # If no specific pattern matches, return the original line
+    return version_line
+
+
+def detect_tool_version(tool: str) -> Dict[str, Any]:
+    """Detect the version of a CLI tool by trying common version commands.
+    
+    Args:
+        tool: The name of the CLI tool (e.g., 'vercel', 'gh', 'docker')
+        
+    Returns:
+        Dict containing version info:
+        {
+            'version': str,  # Version string or 'unknown' if detection failed
+            'command_used': str,  # Command that worked, or None if failed
+            'raw_output': str,  # Raw command output
+            'detection_success': bool  # Whether detection succeeded
+        }
+    """
+    # Common version command patterns to try
+    version_commands = [
+        f"{tool} --version",
+        f"{tool} -v",
+        f"{tool} version"
+    ]
+    
+    for cmd in version_commands:
+        try:
+            # Run command with timeout and capture output
+            result = subprocess.run(
+                cmd.split(),
+                capture_output=True,
+                text=True,
+                timeout=10,  # 10 second timeout
+                check=False  # Don't raise exception on non-zero exit
+            )
+            
+            # If command succeeded and has output, consider it successful
+            if result.returncode == 0 and result.stdout.strip():
+                raw_output = result.stdout.strip()
+                # Extract version from output (take first line, clean it up)
+                version_line = raw_output.split('\n')[0].strip()
+                
+                # Clean up common version output patterns
+                cleaned_version = _clean_version_string(tool, version_line)
+                
+                return {
+                    'version': cleaned_version,
+                    'command_used': cmd,
+                    'raw_output': raw_output,
+                    'detection_success': True
+                }
+            
+            # If stdout is empty but stderr has output, check stderr
+            elif result.returncode == 0 and result.stderr.strip():
+                raw_output = result.stderr.strip()
+                version_line = raw_output.split('\n')[0].strip()
+                
+                # Clean up common version output patterns
+                cleaned_version = _clean_version_string(tool, version_line)
+                
+                return {
+                    'version': cleaned_version,
+                    'command_used': cmd,
+                    'raw_output': raw_output,
+                    'detection_success': True
+                }
+                
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            # Command failed, try next one
+            continue
+    
+    # All commands failed
+    return {
+        'version': 'unknown',
+        'command_used': None,
+        'raw_output': '',
+        'detection_success': False
+    }
 
 
 async def run_test(
@@ -57,6 +181,9 @@ async def run_test(
 
     # Load OAuth token and create isolated environment
     oauth_token = load_oauth_token(oauth_token_file)
+
+    # Detect tool version before execution
+    version_info = detect_tool_version(tool)
 
     # Execute scenario with isolated environment
     trace = []
@@ -135,6 +262,9 @@ async def run_test(
         "success": False,
         "duration_seconds": 0,
         "cost_usd": 0,
+        "tool_version": version_info["version"],
+        "version_detection_method": version_info["command_used"],
+        "version_detection_success": version_info["detection_success"],
     }
 
     # Process final result message

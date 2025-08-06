@@ -19,13 +19,17 @@ Follow this exact sequence for all publishing tasks:
 
 ### Pre-Publishing Checks
 - Verify pyproject.toml version is higher than what exists on PyPI
+- Ensure version consistency between pyproject.toml and __init__.py
+- Check for uncommitted changes that should be included
 - Ensure all dependencies are properly specified
 - Check that README.md and other package metadata are up-to-date
+- Run basic tests or linting if available (uv run pytest, uv run ruff check, etc.)
 
 ### Version Management
 - Always increment version number to avoid conflicts
 - Use semantic versioning: patch (x.x.X) for fixes, minor (x.X.0) for features, major (X.0.0) for breaking changes
-- Update version in pyproject.toml before building
+- Update version in BOTH pyproject.toml and __init__.py for consistency
+- Verify version consistency between files before building
 
 ### Build Process
 ```bash
@@ -52,8 +56,13 @@ uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org
 # Publish to production PyPI
 uv publish --token $(pass pypi/production-token)
 
-# Verify production installation
-uvx agentprobe --help
+# Enhanced verification of production installation
+uvx agentprobe@latest --version  # Verify version number
+uvx agentprobe@latest --help     # Test basic functionality
+uvx agentprobe@latest test git --scenario show-log --help  # Test core commands work
+
+# Clean up build artifacts after successful publish
+rm -rf dist/
 ```
 
 ## Security Best Practices
@@ -68,13 +77,17 @@ uvx agentprobe --help
 ### "File already exists" Error
 **Cause**: Version already published to PyPI
 **Solution**: 
-1. Increment version in pyproject.toml
+1. Increment version in both pyproject.toml and __init__.py
 2. Clean dist/ directory: `rm -rf dist/`
 3. Rebuild and retry
 
 ### Publishing Old Versions
 **Cause**: Multiple versions in dist/ directory
 **Solution**: Always clean with `rm -rf dist/` before building
+
+### Version Inconsistency
+**Cause**: Different versions in pyproject.toml and __init__.py
+**Solution**: Update both files to match before building
 
 ### Token Issues
 **Cause**: Expired or incorrect tokens
@@ -83,6 +96,14 @@ uvx agentprobe --help
 pass edit pypi/testpypi-token
 pass edit pypi/production-token
 ```
+
+## Rollback Procedures
+
+If publishing fails after TestPyPI success:
+1. **Delete git tag**: `git tag -d v<version> && git push origin --delete v<version>`
+2. **Revert version bump**: Reset pyproject.toml and __init__.py to previous version
+3. **Clean build artifacts**: `rm -rf dist/`
+4. **Note**: PyPI packages cannot be deleted, only version numbers can be incremented
 
 ## Post-Publishing Tasks
 
@@ -95,12 +116,15 @@ After successful publishing:
 ## Quality Assurance
 
 Before publishing, verify:
-- [ ] All tests pass locally
-- [ ] Code is properly formatted and linted
-- [ ] Dependencies are correctly specified
-- [ ] Package installs and runs correctly
-- [ ] Version number follows semantic versioning
+- [ ] All tests pass locally (uv run pytest if available)
+- [ ] Code is properly formatted and linted (uv run ruff check/format if available)  
+- [ ] Dependencies are correctly specified in pyproject.toml
+- [ ] Version number is incremented and follows semantic versioning
+- [ ] Version consistency between pyproject.toml and __init__.py
+- [ ] No uncommitted changes that should be included
+- [ ] Package builds without errors (uv build)
 - [ ] No secrets or sensitive data in package files
+- [ ] README.md and package metadata are current
 
 ## Communication Style
 

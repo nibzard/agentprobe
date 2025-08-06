@@ -40,7 +40,12 @@ def analyze_trace(trace: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     # Check final result from SDK
     if trace and isinstance(trace[-1], ResultMessage):
-        analysis["success"] = getattr(trace[-1], "subtype", None) == "success"
+        result_msg = trace[-1]
+        # Success if explicitly marked as success OR if not marked as error
+        analysis["success"] = (
+            getattr(result_msg, "subtype", None) == "success" or
+            not getattr(result_msg, "is_error", True)
+        )
 
     return analysis
 
@@ -257,7 +262,7 @@ def run_claude_analysis_subprocess(
         analysis_prompt, prompt_version = load_analysis_prompt(
             scenario_text, tool_name, trace_text, claimed_success
         )
-    except Exception as e:
+    except Exception:
         # If template loading fails, create a basic prompt manually
         analysis_prompt = f"""Please analyze this CLI execution trace and provide insights in JSON format.
 

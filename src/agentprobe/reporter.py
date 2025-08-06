@@ -35,8 +35,15 @@ def print_report(result: Dict[str, Any], analysis: Dict[str, Any]) -> None:
         else:
             ax_summary = f"Agent failed to complete task after {analysis.get('total_turns', 0)} turns."
 
+    # Format tool display with version if available
+    tool_display = result['tool']
+    if result.get('tool_version') and result['tool_version'] != 'unknown':
+        tool_display = f"{result['tool']} v{result['tool_version']}"
+    elif result.get('version_detection_success') is False:
+        tool_display = f"{result['tool']} (version unknown)"
+
     # Build content focusing on AX
-    content = f"""[bold]Tool:[/bold] {result['tool']} | [bold]Scenario:[/bold] {result['scenario']}
+    content = f"""[bold]Tool:[/bold] {tool_display} | [bold]Scenario:[/bold] {result['scenario']}
 [bold]AX Score:[/bold] {ax_score} ({analysis.get('total_turns', 0)} turns, {"60%" if analysis.get("success") else "0%"} success rate)
 
 [bold cyan]Agent Experience Summary:[/bold cyan]
@@ -110,7 +117,15 @@ def print_aggregate_report(
     tool = results[0]["tool"]
     scenario = results[0]["scenario"]
     
-    content = f"""[bold]Tool:[/bold] {tool} | [bold]Scenario:[/bold] {scenario}
+    # Format tool display with version if available (use first result's version)
+    tool_display = tool
+    first_result = results[0]
+    if first_result.get('tool_version') and first_result['tool_version'] != 'unknown':
+        tool_display = f"{tool} v{first_result['tool_version']}"
+    elif first_result.get('version_detection_success') is False:
+        tool_display = f"{tool} (version unknown)"
+    
+    content = f"""[bold]Tool:[/bold] {tool_display} | [bold]Scenario:[/bold] {scenario}
 [bold]AX Score:[/bold] {ax_score} ({avg_turns:.1f} avg turns, {success_rate:.0%} success rate) | [bold]Runs:[/bold] {total_runs}
 
 [bold cyan]Consistency Analysis:[/bold cyan]

@@ -13,7 +13,8 @@
       "Bash(gh pr view:*)",
       "Bash(uvx agentprobe:*)",
       "Bash(uvx:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(uv build:*)"
     ],
     "deny": []
   }

@@ -75,7 +75,7 @@ async def show_community_comparison(tool: str, scenario: str, user_duration: flo
         # Show sample size
         rich_print(f"[dim]📊 Based on {total_runs} community runs[/dim]")
         
-    except Exception as e:
+    except Exception:
         # Silently fail - don't disrupt the main test output
         pass
 

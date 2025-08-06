@@ -130,13 +130,13 @@ class CommunityAPIClient:
         
         # Show common friction points if available
         if "friction_points" in stats and stats["friction_points"]:
-            print(f"\n[bold yellow]⚠️  Common Friction Points:[/bold yellow]")
+            print("\n[bold yellow]⚠️  Common Friction Points:[/bold yellow]")
             for point in stats["friction_points"][:5]:  # Show top 5
                 print(f"  • {point}")
     
     def display_leaderboard(self, leaderboard: List[Dict[str, Any]]) -> None:
         """Display the community leaderboard."""
-        print(f"\n[bold blue]🏆 Community Leaderboard[/bold blue]")
+        print("\n[bold blue]🏆 Community Leaderboard[/bold blue]")
         
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Rank", justify="right", style="bold")

@@ -1,9 +1,7 @@
 """Result submission module for sharing AgentProbe test results."""
 
-import os
 import re
 import json
-import asyncio
 import uuid
 import base64
 from typing import Optional, Dict, Any
