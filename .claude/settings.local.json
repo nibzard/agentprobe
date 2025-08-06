@@ -14,7 +14,9 @@
       "Bash(uvx agentprobe:*)",
       "Bash(uvx:*)",
       "Bash(cat:*)",
-      "Bash(uv build:*)"
+      "Bash(uv build:*)",
+      "Bash(git reset:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
