@@ -1,6 +1,6 @@
 """AgentProbe - Test how well AI agents interact with CLI tools."""
 
-__version__ = "0.3.8"
+__version__ = "0.3.12"
 
 from .runner import run_test
 from .analyzer import analyze_trace
