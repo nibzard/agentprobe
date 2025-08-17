@@ -193,7 +193,11 @@ def test(
                     scenario=result["scenario"],
                     trace=result["trace"],
                     duration=result["duration_seconds"],
-                    analysis=analysis
+                    analysis=analysis,
+                    cost_usd=result.get("cost_usd"),
+                    tool_version=result.get("tool_version"),
+                    version_detection_method=result.get("version_detection_method"),
+                    version_detection_success=result.get("version_detection_success")
                 )
                 await submitter.submit_result(test_result)
                 
@@ -227,7 +231,11 @@ def test(
                         scenario=result["scenario"],
                         trace=result["trace"],
                         duration=result["duration_seconds"],
-                        analysis=analysis
+                        analysis=analysis,
+                        cost_usd=result.get("cost_usd"),
+                        tool_version=result.get("tool_version"),
+                        version_detection_method=result.get("version_detection_method"),
+                        version_detection_success=result.get("version_detection_success")
                     )
                     await submitter.submit_result(test_result)
 
@@ -300,7 +308,11 @@ def benchmark(
                         scenario=result["scenario"],
                         trace=result["trace"],
                         duration=result["duration_seconds"],
-                        analysis=analysis
+                        analysis=analysis,
+                        cost_usd=result.get("cost_usd"),
+                        tool_version=result.get("tool_version"),
+                        version_detection_method=result.get("version_detection_method"),
+                        version_detection_success=result.get("version_detection_success")
                     )
                     await submitter.submit_result(test_result)
                 except Exception as e:

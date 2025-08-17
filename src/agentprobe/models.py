@@ -15,6 +15,10 @@ class TestResult:
     duration: float
     analysis: Dict[str, Any]
     timestamp: Optional[datetime] = None
+    cost_usd: Optional[float] = None
+    tool_version: Optional[str] = None
+    version_detection_method: Optional[str] = None
+    version_detection_success: Optional[bool] = None
     
     def __post_init__(self):
         if self.timestamp is None:

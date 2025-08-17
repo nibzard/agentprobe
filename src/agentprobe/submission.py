@@ -60,7 +60,7 @@ class ExecutionMetrics(BaseModel):
     total_turns: int
     success: bool
     error_message: Optional[str] = None
-    cost: Optional[Dict[str, Any]] = None
+    cost: Optional[float] = None
 
 
 class AnalysisData(BaseModel):
@@ -69,6 +69,8 @@ class AnalysisData(BaseModel):
     help_usage_count: int = 0
     retry_count: int = 0
     recommendations: list[str] = Field(default_factory=list)
+    agent_summary: Optional[str] = None
+    ax_score: Optional[str] = None
 
 
 class TraceSummary(BaseModel):
@@ -89,6 +91,7 @@ class ResultSubmission(BaseModel):
     execution: ExecutionMetrics
     analysis: AnalysisData
     trace_summary: TraceSummary
+    tool_version_info: Optional[Dict[str, Any]] = None
 
 
 class DataSanitizer:
@@ -217,25 +220,40 @@ class ResultSubmitter:
             error_message=DataSanitizer.sanitize_text(
                 result.analysis.get('error_message', '')
             ) if result.analysis.get('error_message') else '',
-            cost=result.analysis.get('cost')
+            cost=result.cost_usd
         )
 
+        # Extract friction points from observations (filter out status messages)
+        friction_points = []
+        for obs in result.analysis.get('observations', []):
+            if not obs.startswith("✅") and not obs.startswith("⚠️ Using") and not obs.startswith("⚠️ Claude"):
+                friction_points.append(obs)
+        
         # Extract analysis data
         analysis = AnalysisData(
-            friction_points=result.analysis.get('friction_points', []),
+            friction_points=DataSanitizer.sanitize_list(friction_points),
             help_usage_count=result.analysis.get('help_usage_count', 0),
             retry_count=result.analysis.get('retry_count', 0),
             recommendations=DataSanitizer.sanitize_list(
                 result.analysis.get('recommendations', [])
-            )
+            ),
+            agent_summary=result.analysis.get('ax_summary', result.analysis.get('claude_analysis', None)),
+            ax_score=result.analysis.get('ax_score', None)
         )
 
         # Create sanitized trace summary
         trace_summary = self._create_trace_summary(result)
 
-        # Get tool version
+        # Get tool version info
+        tool_version_info = None
+        if result.tool_version:
+            tool_version_info = {
+                'tool_version': result.tool_version,
+                'version_detection_method': getattr(result, 'version_detection_method', None),
+                'version_detection_success': getattr(result, 'version_detection_success', True)
+            }
+        
         environment = {
-            'tool_version': self._get_tool_version(result.tool),
             'anonymous_user_id': self.anonymous_id
         }
 
@@ -248,7 +266,8 @@ class ResultSubmitter:
             environment=environment,
             execution=execution,
             analysis=analysis,
-            trace_summary=trace_summary
+            trace_summary=trace_summary,
+            tool_version_info=tool_version_info
         )
 
     def _create_trace_summary(self, result: TestResult) -> TraceSummary:
@@ -358,7 +377,7 @@ class ResultSubmitter:
 
         try:
             payload = self._prepare_payload(result)
-
+            
             async with httpx.AsyncClient() as client:
                 headers = {}
                 if self.api_key:
