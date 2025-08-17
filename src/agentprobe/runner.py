@@ -142,7 +142,8 @@ async def run_test(
     scenario_name: str,
     work_dir: Optional[Path] = None,
     oauth_token_file: Optional[Path] = None,
-    show_progress: bool = True
+    show_progress: bool = True,
+    yolo: bool = False
 ) -> Dict[str, Any]:
     """Run a test scenario using Claude Code SDK."""
     # Load scenario prompt
@@ -175,6 +176,10 @@ async def run_test(
     
     # Apply scenario-specific overrides
     options_dict.update(scenario_options)
+    
+    # Override permission mode if yolo flag is set
+    if yolo:
+        options_dict['permission_mode'] = "bypassPermissions"
     
     # Create options object
     options = ClaudeCodeOptions(**options_dict)

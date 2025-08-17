@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AgentProbe is a generic CLI testing harness that uses Claude Code SDK to test how well AI agents interact with command-line tools. It runs scenarios (simple text prompts) against CLIs and analyzes the results to provide insights on CLI usability for AI agents.
 
+
+## Development Principles
+
+* **Modularity**: Every component must be designed as independent, pluggable modules to allow users to configure different actions
+* **Domain-Driven Design**: Clear separation of concerns with well-defined domain boundaries (Collection, Normalization, Generation, Output)
+* **Excessive Documentation**: Every module, function, and configuration option must be thoroughly documented with examples
+
 ## Core Architecture
 
 The project follows a simple 4-component architecture:
@@ -126,7 +133,7 @@ This project uses the `pass` CLI tool for secure token management. Store your Py
 # Store TestPyPI token
 pass insert pypi/testpypi-token
 
-# Store production PyPI token  
+# Store production PyPI token
 pass insert pypi/production-token
 
 # Verify tokens are stored (will show encrypted tokens)

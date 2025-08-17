@@ -166,6 +166,9 @@ def test(
     oauth_token_file: Optional[Path] = typer.Option(
         None, "--oauth-token-file", help="Path to file containing Claude Code OAuth token"
     ),
+    yolo: bool = typer.Option(
+        False, "--yolo", help="Run scenarios without any permission prompts (DANGEROUS - use only in safe environments)"
+    ),
 ):
     """Run a test scenario against a CLI tool."""
 
@@ -173,7 +176,7 @@ def test(
         try:
             if runs == 1:
                 # Single run - use enhanced analysis
-                result = await run_test(tool, scenario, work_dir, oauth_token_file, show_progress=not verbose)
+                result = await run_test(tool, scenario, work_dir, oauth_token_file, show_progress=not verbose, yolo=yolo)
                 analysis = await enhanced_analyze_trace(
                     result["trace"],
                     result.get("scenario_text", ""),
@@ -212,7 +215,7 @@ def test(
                 for run_num in range(1, runs + 1):
                     typer.echo(f"Running {tool}/{scenario} - Run {run_num}/{runs}")
 
-                    result = await run_test(tool, scenario, work_dir, oauth_token_file, show_progress=not verbose)
+                    result = await run_test(tool, scenario, work_dir, oauth_token_file, show_progress=not verbose, yolo=yolo)
                     analysis = await enhanced_analyze_trace(
                         result["trace"],
                         result.get("scenario_text", ""),
@@ -265,6 +268,9 @@ def benchmark(
     oauth_token_file: Optional[Path] = typer.Option(
         None, "--oauth-token-file", help="Path to file containing Claude Code OAuth token"
     ),
+    yolo: bool = typer.Option(
+        False, "--yolo", help="Run scenarios without any permission prompts (DANGEROUS - use only in safe environments)"
+    ),
 ):
     """Run benchmark tests for CLI tools."""
 
@@ -291,7 +297,7 @@ def benchmark(
             for scenario_file in tool_dir.glob("*.txt"):
                 scenario_name = scenario_file.stem
                 try:
-                    result = await run_test(tool_name, scenario_name, None, oauth_token_file)
+                    result = await run_test(tool_name, scenario_name, None, oauth_token_file, yolo=yolo)
                     analysis = await enhanced_analyze_trace(
                         result["trace"],
                         result.get("scenario_text", ""),

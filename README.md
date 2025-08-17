@@ -109,6 +109,9 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test docker 
 
 # Show detailed trace with message debugging (disables progress indicators)
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test gh --scenario create-pr --verbose
+
+# ⚠️ DANGEROUS: Run without permission prompts (use only in safe environments)
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe test docker --scenario run-nginx --yolo
 ```
 
 ### Benchmark Tools
@@ -122,6 +125,9 @@ uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark ve
 
 # Test all available tools and scenarios
 uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark --all
+
+# ⚠️ DANGEROUS: Run all benchmarks without permission prompts
+uvx --from git+https://github.com/nibzard/agentprobe.git agentprobe benchmark --all --yolo
 ```
 
 ### Reports
@@ -145,6 +151,24 @@ Verbose output includes:
 - Message content and tool usage
 - SDK object attributes and debugging information
 - Full conversation trace between Claude and your CLI
+
+### ⚠️ YOLO Mode (Use with Extreme Caution)
+
+The `--yolo` flag enables autonomous execution without permission prompts, allowing Claude to run ANY command without user approval:
+
+```bash
+# WARNING: Only use in isolated, safe environments
+agentprobe test docker --scenario build-app --yolo
+```
+
+**Security Considerations:**
+- **ONLY** use in containerized or sandboxed environments
+- Claude can execute arbitrary commands including `rm -rf`, network calls, system modifications
+- No safety guardrails - Claude has full system access
+- Intended for CI/CD pipelines, testing environments, or research purposes
+- **NEVER** use on production systems or with sensitive data
+
+This mode is equivalent to running Claude Code with `--dangerously-skip-permissions`.
 
 ## Example Output
 
