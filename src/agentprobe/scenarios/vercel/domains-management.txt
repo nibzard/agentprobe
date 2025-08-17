@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: complex
+expected_turns: 8-12
+description: "Manage custom domain names for projects"
+---
+Use Vercel CLI to manage domain names for your projects.
+
+Tasks:
+1. List current domains using `vercel domains ls`
+2. Explore domain management options with `vercel domains --help`
+3. Check domain status and configuration details
+4. Understand how to add/remove domains from projects
+5. Examine domain verification and setup requirements
+
+Success criteria:
+- Must successfully list existing domains
+- Should explore domain management capabilities
+- Report domain status, verification state, and configuration
+- Document domain addition/removal processes
+- Handle authentication and permission requirements
+
+Note: This tests domain management features that may require domain ownership verification and specific account permissions.

@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: medium
+expected_turns: 6-10
+description: "Install marketplace integrations"
+---
+Use Vercel CLI to install integrations from the marketplace.
+
+Tasks:
+1. Explore available integrations using `vercel i` or `vercel install`
+2. List marketplace integrations that can be installed
+3. Choose a suitable integration to install (preferably free/development-friendly)
+4. Attempt to install the integration
+5. Verify the integration was installed successfully
+
+Success criteria:
+- Must successfully explore available integrations
+- Should understand the installation process
+- Attempt to install at least one integration
+- Report integration features and configuration requirements
+- Handle authentication and permission requirements
+
+Note: This tests marketplace integration capabilities that may require specific permissions or payment for certain integrations.

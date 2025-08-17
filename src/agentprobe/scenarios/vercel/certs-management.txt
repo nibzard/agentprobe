@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: complex
+expected_turns: 7-12
+description: "Manage SSL certificates for custom domains"
+---
+Use Vercel CLI to manage SSL certificates for your domains.
+
+Tasks:
+1. List current SSL certificates using `vercel certs ls`
+2. Explore certificate management options with `vercel certs --help`
+3. If you have custom domains, check their certificate status
+4. Try to view certificate details for existing certificates
+5. Understand the certificate lifecycle and renewal process
+
+Success criteria:
+- Must successfully list existing certificates
+- Should explore certificate management capabilities
+- Report certificate status and expiration information
+- Document available certificate operations
+- Handle cases where no custom domains/certificates exist
+
+Note: This tests SSL certificate management features that may require custom domains and specific permissions. May be limited if no custom domains are configured.

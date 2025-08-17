@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: opus
+max_turns: 20
+complexity: complex
+expected_turns: 10-15
+description: "Use binary search to find deployment that introduced a bug"
+---
+Use Vercel CLI's bisect feature to find the deployment that introduced a bug.
+
+Tasks:
+1. List recent deployments to understand the deployment history
+2. Use `vercel bisect` command to start the debugging process
+3. Follow the bisect process to identify problematic deployments
+4. Test the bisect workflow and understand how it guides debugging
+5. Report on the bisect process and its effectiveness
+
+Success criteria:
+- Must successfully initiate the bisect process
+- Should understand and follow the bisect workflow
+- Report how the bisect feature works for deployment debugging
+- Document the steps and guidance provided by the CLI
+- Handle cases where bisect may not be applicable
+
+Note: This tests advanced debugging capabilities that help developers identify when bugs were introduced across deployment history. The bisect command may require specific conditions or deployment history to be effective.

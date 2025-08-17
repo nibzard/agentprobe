@@ -1,0 +1,30 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: opus
+max_turns: 20
+complexity: complex
+expected_turns: 10-15
+description: "Configure and manage microfrontends architecture"
+---
+Use Vercel CLI to explore and configure microfrontends capabilities.
+
+Tasks:
+1. Explore microfrontends functionality using `vercel microfrontends --help`
+2. Check if current project supports microfrontends architecture
+3. Understand microfrontends configuration options
+4. Try to set up or configure microfrontends if possible
+5. Examine routing and deployment strategies for microfrontends
+6. Report on microfrontends capabilities and requirements
+
+Success criteria:
+- Must successfully explore microfrontends functionality
+- Should understand microfrontends architecture options
+- Report configuration requirements and capabilities
+- Document microfrontends setup process and limitations
+- Handle cases where microfrontends are not applicable to current project
+
+Note: This tests advanced microfrontends architecture features that may require specific project configurations or enterprise-level permissions.

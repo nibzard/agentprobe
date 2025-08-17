@@ -1,0 +1,28 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: acceptEdits
+allowed_tools: [Read, Write, Bash]
+model: sonnet
+max_turns: 12
+complexity: medium
+expected_turns: 5-8
+description: "Pull project settings from Vercel cloud to local directory"
+---
+Use Vercel CLI to pull project settings from the cloud to the local directory.
+
+Tasks:
+1. Check if the current directory is linked to a Vercel project
+2. Use the `vercel pull` command to download project settings from the cloud
+3. Verify what files and settings were downloaded (e.g., .vercel/, environment variables, project configuration)
+4. Check if local configuration files were created or updated
+5. Review the pulled settings to understand project configuration
+
+Success criteria:
+- Must successfully execute the pull command
+- Should download project settings to local directory
+- Verify what configuration files were created/updated
+- Report the structure and content of pulled settings
+
+Note: This tests synchronization between cloud project configuration and local development environment.

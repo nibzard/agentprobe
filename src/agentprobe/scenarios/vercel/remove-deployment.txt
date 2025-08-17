@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 12
+complexity: medium
+expected_turns: 5-8
+description: "Remove specific deployments from project"
+---
+Use Vercel CLI to remove deployments from your project.
+
+Tasks:
+1. List recent deployments to see available deployment IDs
+2. Choose a deployment that can be safely removed (not production)
+3. Use `vercel rm` or `vercel remove` command to delete the deployment
+4. Verify the deployment was removed by listing deployments again
+5. Understand the removal process and any confirmations required
+
+Success criteria:
+- Must successfully list existing deployments
+- Should identify deployments that can be safely removed
+- Execute deployment removal command successfully
+- Verify the deployment is no longer listed
+- Handle any confirmation prompts or safety checks
+
+Note: This tests deployment cleanup capabilities for managing project resources and removing unused deployments.

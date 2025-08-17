@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: complex
+expected_turns: 7-12
+description: "Manage DNS records for custom domains"
+---
+Use Vercel CLI to manage DNS records for your domains.
+
+Tasks:
+1. List current DNS records using `vercel dns ls`
+2. Explore DNS management options with `vercel dns --help`
+3. If you have custom domains, examine their DNS configuration
+4. Try to understand how to add/modify DNS records
+5. Check if there are any DNS verification requirements
+
+Success criteria:
+- Must successfully list existing DNS records
+- Should explore DNS management capabilities
+- Report current DNS configuration
+- Document available DNS record types and operations
+- Handle cases where no custom domains exist
+
+Note: This tests DNS management features that require custom domain ownership and may have limited functionality without proper domain setup.

@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 12
+complexity: medium
+expected_turns: 5-8
+description: "Manage existing integrations and their settings"
+---
+Use Vercel CLI to manage your existing integrations.
+
+Tasks:
+1. List current integrations using `vercel integration ls`
+2. Explore integration management options with `vercel integration --help`
+3. Check configuration and status of existing integrations
+4. Understand how to configure or remove integrations
+5. Examine integration permissions and access levels
+
+Success criteria:
+- Must successfully list existing integrations
+- Should explore integration management capabilities
+- Report integration status, configuration, and permissions
+- Document integration lifecycle management options
+- Handle cases where no integrations are installed
+
+Note: This tests management of existing marketplace integrations and their configuration.

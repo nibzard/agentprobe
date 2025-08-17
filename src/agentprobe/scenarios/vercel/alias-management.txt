@@ -1,0 +1,30 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: complex
+expected_turns: 8-12
+description: "Manage domain aliases for deployments"
+---
+Use Vercel CLI to manage domain aliases for your deployments.
+
+Tasks:
+1. List current aliases using `vercel alias ls`
+2. Get a deployment URL from recent deployments
+3. Try to create a new alias using `vercel alias` command
+4. List aliases again to verify the creation
+5. If successful, try to remove the alias you just created
+6. Explore other alias management options
+
+Success criteria:
+- Must successfully list existing aliases
+- Should attempt to create and manage domain aliases
+- Handle authentication and permission requirements
+- Report available alias management capabilities
+- Document any domain/DNS requirements or limitations
+
+Note: This tests advanced domain management features that may require specific permissions or domain ownership.

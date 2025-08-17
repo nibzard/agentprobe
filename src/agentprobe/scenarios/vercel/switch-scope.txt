@@ -1,0 +1,28 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 10
+complexity: simple
+expected_turns: 3-6
+description: "Switch between different teams or scopes"
+---
+Use Vercel CLI to manage scope switching between teams or personal accounts.
+
+Tasks:
+1. Check current scope/team using `vercel whoami`
+2. List available scopes/teams if possible
+3. Use `vercel switch` command to see switching options
+4. If multiple scopes are available, demonstrate switching between them
+5. Verify the scope change was successful
+
+Success criteria:
+- Must identify current scope/team context
+- Should explore scope switching capabilities
+- Report available scopes and current active scope
+- Handle cases where only one scope is available
+
+Note: This tests team/organization management capabilities through the CLI.

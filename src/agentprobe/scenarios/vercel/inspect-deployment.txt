@@ -1,0 +1,24 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 10
+complexity: medium
+expected_turns: 4-7
+description: "Inspect detailed information about a specific deployment"
+---
+Use Vercel CLI to inspect deployment details.
+
+Tasks:
+1. First, list recent deployments to get deployment IDs
+2. Choose one deployment ID from the list
+3. Use the `vercel inspect` command to get detailed information about that deployment
+4. Report the key information found (URL, status, build logs, performance metrics, etc.)
+
+Success criteria:
+- Must successfully retrieve and display detailed deployment information
+- Should show deployment metadata, build details, and performance data
+- Report any useful debugging information available through the inspect command

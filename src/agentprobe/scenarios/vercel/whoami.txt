@@ -1,0 +1,27 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 5
+complexity: simple
+expected_turns: 1-3
+description: "Check current user identity and authentication status"
+---
+Use Vercel CLI to check your current user identity and authentication status.
+
+Tasks:
+1. Run `vercel whoami` to check current user
+2. Verify authentication status and account information
+3. Report user details, team membership, and current scope
+4. Check if additional authentication is needed
+
+Success criteria:
+- Must successfully retrieve user identity information
+- Should show current authentication status
+- Report username, email, and active scope/team
+- Handle cases where authentication may be required
+
+Note: This tests basic authentication and user identity verification through the CLI.

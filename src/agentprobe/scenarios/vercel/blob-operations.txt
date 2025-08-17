@@ -1,0 +1,31 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: acceptEdits
+allowed_tools: [Read, Write, Bash]
+model: sonnet
+max_turns: 18
+complexity: complex
+expected_turns: 8-12
+description: "Manage blob stores and file operations"
+---
+Use Vercel CLI to manage blob stores and file operations.
+
+Tasks:
+1. Explore blob functionality using `vercel blob --help`
+2. List existing blob stores if any exist
+3. Try to create a test blob store or use existing one
+4. Upload a small test file to the blob store
+5. List files in the blob store
+6. Download or access the uploaded file
+7. Clean up test data if created
+
+Success criteria:
+- Must successfully explore blob management capabilities
+- Should understand blob store creation and file operations
+- Demonstrate file upload/download functionality
+- Report blob store features and limitations
+- Handle authentication and permission requirements
+
+Note: This tests Vercel's blob storage features for file management, which may require specific permissions or billing setup.

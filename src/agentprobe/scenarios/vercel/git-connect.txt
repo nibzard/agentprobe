@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: medium
+expected_turns: 6-10
+description: "Connect Git repository to Vercel project"
+---
+Use Vercel CLI to manage Git repository connections for your project.
+
+Tasks:
+1. Check current Git connection status using `vercel git`
+2. Explore Git management options with `vercel git --help`
+3. Understand how to connect or disconnect Git repositories
+4. Check if auto-deployment from Git is configured
+5. Examine Git integration settings and branch configuration
+
+Success criteria:
+- Must successfully check Git connection status
+- Should explore Git integration capabilities
+- Report current repository connection and auto-deployment settings
+- Document Git integration configuration options
+- Handle cases where no Git repository is connected
+
+Note: This tests Git integration features for automatic deployments and repository management.

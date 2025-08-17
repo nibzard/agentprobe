@@ -1,0 +1,28 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: medium
+expected_turns: 6-10
+description: "Rebuild and redeploy a previous deployment"
+---
+Use Vercel CLI to redeploy an existing deployment.
+
+Tasks:
+1. List recent deployments to get available deployment URLs/IDs
+2. Select a previous deployment to redeploy
+3. Use the `vercel redeploy` command to rebuild and redeploy that deployment
+4. Monitor the redeploy process and verify completion
+5. Compare the new deployment URL with the original
+
+Success criteria:
+- Must successfully trigger a redeploy operation
+- Should provide the new deployment URL
+- Verify the redeploy process completed successfully
+- Report any differences between original and redeployed versions
+
+Note: This tests the ability to reproduce deployments, which is useful for debugging and rollback scenarios.

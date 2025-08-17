@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 15
+complexity: medium
+expected_turns: 6-10
+description: "Manage Vercel projects (create, list, configure)"
+---
+Use Vercel CLI to manage your projects.
+
+Tasks:
+1. List all projects using `vercel projects ls`
+2. Explore project management options with `vercel projects --help`
+3. Check current project details and configuration
+4. Understand how to create new projects or modify existing ones
+5. Examine project settings and metadata
+
+Success criteria:
+- Must successfully list existing projects
+- Should explore project management capabilities
+- Report project details, settings, and configuration options
+- Document project creation and modification processes
+- Show project metadata like domains, environment variables, team access
+
+Note: This tests project-level management features for organizing deployments and configurations.

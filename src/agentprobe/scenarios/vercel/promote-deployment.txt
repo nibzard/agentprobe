@@ -1,0 +1,27 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 12
+complexity: medium
+expected_turns: 5-8
+description: "Promote an existing deployment to current production"
+---
+Use Vercel CLI to promote an existing deployment to production.
+
+Tasks:
+1. List recent deployments to see available deployment URLs/IDs
+2. Identify a suitable non-production deployment to promote
+3. Use the `vercel promote` command to promote that deployment to current production
+4. Verify the promotion was successful by checking the current production deployment
+
+Success criteria:
+- Must successfully execute the promote command
+- Should confirm the deployment is now serving as production
+- Report the URL and status of the promoted deployment
+- Handle any authentication or permission issues gracefully
+
+Note: This tests the ability to manage production releases through CLI promotion.

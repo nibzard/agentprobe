@@ -1,0 +1,20 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 8
+complexity: simple
+expected_turns: 3-5
+description: "Test Vercel cache management operations"
+---
+Use Vercel CLI to manage cache for the current project. 
+
+Tasks:
+1. List current cache information using the cache command
+2. Clear the cache if possible
+3. Verify the cache was cleared by listing cache info again
+
+Report what cache operations are available and their results.

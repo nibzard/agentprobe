@@ -1,0 +1,29 @@
+---
+version: 2
+created: 2025-08-17
+tool: vercel
+permission_mode: default
+allowed_tools: [Bash]
+model: sonnet
+max_turns: 12
+complexity: medium
+expected_turns: 5-8
+description: "Manage team settings and membership"
+---
+Use Vercel CLI to manage team settings and membership.
+
+Tasks:
+1. List team information using `vercel teams ls`
+2. Explore team management options with `vercel teams --help`
+3. Check current team membership and roles
+4. Understand team settings and configuration options
+5. Examine team-level permissions and access controls
+
+Success criteria:
+- Must successfully list team information
+- Should explore team management capabilities
+- Report team membership, roles, and settings
+- Document team configuration options
+- Handle cases where user is not part of any teams
+
+Note: This tests team collaboration features that may require team membership or administrative permissions.
