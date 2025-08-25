@@ -1,0 +1,2 @@
+Login to Steel CLI with your authentication credentials.
+Verify the login is successful by checking the current session status.

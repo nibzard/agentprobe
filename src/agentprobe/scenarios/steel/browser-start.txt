@@ -1,0 +1,2 @@
+Start the Steel Browser in development mode on port 3000.
+Enable verbose logging and verify Docker is running before starting the browser.

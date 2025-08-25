@@ -1,0 +1,2 @@
+Initialize a new OpenAI Computer Use project with Steel integration.
+Set the project name to 'ai-automation' and configure it with both Steel API and OpenAI API keys.

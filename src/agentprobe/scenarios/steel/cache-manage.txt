@@ -1,0 +1,2 @@
+Manage the Steel CLI cache by clearing any stored files.
+Display the cache status before and after the clearing operation.

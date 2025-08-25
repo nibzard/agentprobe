@@ -1,0 +1,2 @@
+Stop any running Steel Browser development instance.
+Confirm that the browser process has been terminated successfully.

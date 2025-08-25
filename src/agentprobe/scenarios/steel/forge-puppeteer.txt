@@ -1,0 +1,2 @@
+Initialize a new Puppeteer JavaScript project using Steel CLI.
+Name the project 'web-scraper' and confirm all necessary files are generated.

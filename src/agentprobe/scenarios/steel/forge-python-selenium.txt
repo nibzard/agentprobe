@@ -1,0 +1,2 @@
+Create a new Python Selenium project using Steel CLI.
+Name the project 'python-automation' and ensure all Python dependencies are properly set up.

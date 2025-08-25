@@ -1,0 +1,2 @@
+Run a Steel Cookbook automation using the Playwright TypeScript template.
+Provide a sample task like "Navigate to example.com and take a screenshot" and enable the live session viewer.

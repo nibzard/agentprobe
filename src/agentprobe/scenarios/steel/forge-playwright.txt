@@ -1,0 +1,2 @@
+Create a new Playwright TypeScript project using Steel CLI.
+Set the project name to 'test-automation' and verify the project structure is created successfully.

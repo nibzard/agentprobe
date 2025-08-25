@@ -1,0 +1,2 @@
+Display the current Steel CLI configuration and session information.
+Show all available settings and verify the API connection status.
