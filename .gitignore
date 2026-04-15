@@ -68,6 +68,9 @@ venv.bak/
 traces/
 *.log
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # uv
 .python-version
 
